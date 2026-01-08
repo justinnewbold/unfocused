@@ -1,0 +1,160 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom scrollbar for ADHD-friendly experience */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Smooth focus states for accessibility */
+*:focus-visible {
+  outline: 2px solid #f19033;
+  outline-offset: 2px;
+}
+
+/* Custom selection color */
+::selection {
+  background: rgba(241, 144, 51, 0.3);
+}
+
+/* Base layer customizations */
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  
+  body {
+    @apply bg-surface-dark text-white;
+    font-feature-settings: "liga" 1, "calt" 1;
+  }
+}
+
+/* Component layer for reusable patterns */
+@layer components {
+  /* Glass morphism card */
+  .glass-card {
+    @apply bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl;
+  }
+  
+  /* Glowing border effect */
+  .glow-border {
+    box-shadow: 
+      0 0 20px rgba(241, 144, 51, 0.1),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+  
+  /* Thinking pulse animation */
+  .thinking-dot {
+    @apply w-2 h-2 rounded-full bg-nero-400;
+    animation: thinking 1.4s ease-in-out infinite;
+  }
+  
+  .thinking-dot:nth-child(2) {
+    animation-delay: 0.2s;
+  }
+  
+  .thinking-dot:nth-child(3) {
+    animation-delay: 0.4s;
+  }
+  
+  /* Energy level indicators */
+  .energy-depleted { @apply bg-red-500/20 border-red-500/50 text-red-300; }
+  .energy-low { @apply bg-orange-500/20 border-orange-500/50 text-orange-300; }
+  .energy-moderate { @apply bg-yellow-500/20 border-yellow-500/50 text-yellow-300; }
+  .energy-good { @apply bg-green-500/20 border-green-500/50 text-green-300; }
+  .energy-peak { @apply bg-emerald-500/20 border-emerald-500/50 text-emerald-300; }
+  
+  /* One Thing mode spotlight */
+  .one-thing-spotlight {
+    background: radial-gradient(
+      ellipse at center,
+      rgba(241, 144, 51, 0.1) 0%,
+      transparent 70%
+    );
+  }
+  
+  /* Breadcrumb trail connector */
+  .breadcrumb-connector {
+    @apply absolute left-4 top-10 w-0.5 h-full bg-gradient-to-b from-nero-400/50 to-transparent;
+  }
+}
+
+/* Utility layer for custom utilities */
+@layer utilities {
+  /* Text gradient */
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-nero-400 to-nero-300;
+  }
+  
+  /* Hide scrollbar but keep functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  
+  /* Prevent text selection for UI elements */
+  .select-none-children * {
+    user-select: none;
+  }
+}
+
+/* Completion celebration animation */
+@keyframes celebrate {
+  0% {
+    transform: scale(1);
+  }
+  25% {
+    transform: scale(1.1) rotate(-3deg);
+  }
+  50% {
+    transform: scale(1.15) rotate(3deg);
+  }
+  75% {
+    transform: scale(1.1) rotate(-1deg);
+  }
+  100% {
+    transform: scale(1) rotate(0);
+  }
+}
+
+.animate-celebrate {
+  animation: celebrate 0.6s ease-out;
+}
+
+/* Confetti particles */
+@keyframes confetti-fall {
+  0% {
+    transform: translateY(-100%) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+.confetti {
+  position: fixed;
+  width: 10px;
+  height: 10px;
+  animation: confetti-fall 3s ease-out forwards;
+}
