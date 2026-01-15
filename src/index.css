@@ -2,6 +2,18 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Respect user's motion preferences - critical for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* Custom scrollbar for ADHD-friendly experience */
 ::-webkit-scrollbar {
   width: 8px;
@@ -157,4 +169,21 @@
   width: 10px;
   height: 10px;
   animation: confetti-fall 3s ease-out forwards;
+}
+
+/* Safe area support for iOS devices with notch/home indicator */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+.safe-area-top {
+  padding-top: env(safe-area-inset-top, 0);
+}
+
+/* Larger touch targets for mobile - ADHD-friendly */
+@media (pointer: coarse) {
+  button, a, [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
 }
