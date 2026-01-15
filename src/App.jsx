@@ -1,25 +1,21 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { 
-  MessageCircle, 
-  Target, 
-  Activity, 
+import {
+  MessageCircle,
+  Target,
   Brain,
-  ChevronRight,
-  Sparkles,
   Battery,
   BatteryLow,
   BatteryMedium,
   BatteryFull,
-  Zap,
   MapPin,
-  ArrowLeft,
-  Check,
-  RotateCcw,
   Eye,
   EyeOff,
-  Send
+  AlertCircle
 } from 'lucide-react'
+
+// Import hooks
+import { useReducedMotion, getMotionProps } from './hooks/useReducedMotion'
 
 // Import components
 import EnergyCheckIn from './components/EnergyCheckIn'
@@ -36,43 +32,36 @@ const VIEW_MODES = {
 }
 
 export default function App() {
+  const prefersReducedMotion = useReducedMotion()
+
   // Core state
   const [viewMode, setViewMode] = useState(VIEW_MODES.CONVERSATION)
   const [energyLevel, setEnergyLevel] = useState(3)
   const [showEnergyCheckIn, setShowEnergyCheckIn] = useState(false)
-  const [thinkingStreamLevel, setThinkingStreamLevel] = useState('minimal') // off, minimal, full
-  
-  // Demo data for breadcrumbs
+  const [thinkingStreamLevel, setThinkingStreamLevel] = useState('off') // Defaulted to off for less cognitive load
+
+  // Demo data for breadcrumbs - simplified structure (what + why)
   const [breadcrumbs, setBreadcrumbs] = useState([
     {
       id: '1',
       activity: 'Cleaning the kitchen drawer',
       context: 'Looking for the screwdriver',
-      thought: 'Need to fix the cabinet hinge',
-      nextStep: 'Find the Phillips head',
       createdAt: new Date(Date.now() - 1000 * 60 * 5),
-      isSpawn: false,
     },
     {
       id: '2',
       activity: 'Searching for drill bits',
       context: 'Realized the screw is stripped',
-      thought: 'Might need to re-drill the hole',
-      nextStep: 'Get the right size bit',
       createdAt: new Date(Date.now() - 1000 * 60 * 3),
-      isSpawn: true,
     },
     {
       id: '3',
       activity: 'Phone call with Mom',
       context: 'She called about Sunday dinner',
-      thought: 'Need to check my calendar',
-      nextStep: 'Get back to the drawer',
       createdAt: new Date(Date.now() - 1000 * 60 * 1),
-      isSpawn: true,
     },
   ])
-  
+
   // Demo task for One Thing mode
   const [currentTask, setCurrentTask] = useState({
     id: '1',
@@ -82,64 +71,56 @@ export default function App() {
     reason: 'This is the smallest step to get back on track',
     isCompleted: false,
   })
-  
+
   // Conversation state
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
-      content: "Hey! I noticed you've been bouncing between a few things. Want me to help you get back on track? I've been keeping notes on where you left off. 📝",
+      content: "Hey! I noticed you've been bouncing between a few things. Want me to help you get back on track? I've been keeping notes on where you left off.",
       thinking: null,
     }
   ])
-  
+
   // Check if first visit - show energy check-in
   useEffect(() => {
     const lastCheckIn = localStorage.getItem('lastEnergyCheckIn')
     const today = new Date().toDateString()
-    
+
     if (lastCheckIn !== today) {
       setShowEnergyCheckIn(true)
     }
   }, [])
-  
-  const handleEnergySubmit = (level, mood, note) => {
+
+  const handleEnergySubmit = (level, mood, message) => {
     setEnergyLevel(level)
     setShowEnergyCheckIn(false)
     localStorage.setItem('lastEnergyCheckIn', new Date().toDateString())
-    
+
     // Add a contextual message from Nero
-    const energyMessages = {
-      1: "I hear you - it's a tough one today. Let's keep things super simple. One tiny thing at a time. 💙",
-      2: "Running a bit low, got it. I'll suggest easy wins to help build some momentum.",
-      3: "Middle of the road energy - I'll mix it up with some quick tasks and one meaningful one.",
-      4: "Nice! You've got some good fuel today. Let's make it count.",
-      5: "You're on fire! 🔥 Let's channel that energy into something you've been putting off.",
-    }
-    
     setMessages(prev => [...prev, {
       role: 'assistant',
-      content: energyMessages[level],
-      thinking: thinkingStreamLevel !== 'off' ? `Analyzing energy level ${level}... Adjusting task suggestions to match current capacity.` : null,
+      content: message,
+      thinking: thinkingStreamLevel !== 'off' ? `Analyzing energy level... Adjusting task suggestions to match current capacity.` : null,
     }])
   }
-  
+
   const handleTaskComplete = () => {
     setCurrentTask(prev => ({ ...prev, isCompleted: true }))
-    
+
     // Celebration message
     setTimeout(() => {
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: "Yes! ✨ That's one thing done. The momentum is building. Want to tackle another quick win, or should we check your breadcrumbs?",
+        content: "Done! That's momentum building. Want to tackle another quick win, or check your breadcrumbs?",
         thinking: null,
       }])
     }, 1000)
   }
-  
+
   const resolveBreadcrumb = (id) => {
     setBreadcrumbs(prev => prev.filter(b => b.id !== id))
   }
-  
+
   const toggleThinkingStream = () => {
     const levels = ['off', 'minimal', 'full']
     const currentIndex = levels.indexOf(thinkingStreamLevel)
@@ -147,25 +128,80 @@ export default function App() {
     setThinkingStreamLevel(levels[nextIndex])
   }
 
+  // Quick interrupt handler - drops a breadcrumb instantly
+  const handleInterrupt = () => {
+    const newBreadcrumb = {
+      id: Date.now().toString(),
+      activity: currentTask.title || 'Current task',
+      context: 'Got interrupted',
+      createdAt: new Date(),
+    }
+
+    setBreadcrumbs(prev => [newBreadcrumb, ...prev])
+
+    // Add feedback message
+    setMessages(prev => [...prev, {
+      role: 'assistant',
+      content: "Breadcrumb dropped! I'll remember where you were. Go handle what you need to - I've got your back.",
+      thinking: null,
+    }])
+
+    // Switch to breadcrumbs view to show it worked
+    setViewMode(VIEW_MODES.BREADCRUMBS)
+  }
+
+  // Get energy display info
+  const getEnergyDisplay = () => {
+    if (energyLevel <= 2) {
+      return { icon: BatteryLow, color: 'text-orange-400', label: 'Low' }
+    } else if (energyLevel <= 3) {
+      return { icon: BatteryMedium, color: 'text-yellow-400', label: 'Med' }
+    } else {
+      return { icon: BatteryFull, color: 'text-green-400', label: 'High' }
+    }
+  }
+
+  const energyDisplay = getEnergyDisplay()
+  const EnergyIcon = energyDisplay.icon
+
+  // Animation variants
+  const pageVariants = {
+    conversation: {
+      initial: { opacity: 0, x: -20 },
+      animate: { opacity: 1, x: 0 },
+      exit: { opacity: 0, x: 20 }
+    },
+    oneThing: {
+      initial: { opacity: 0, scale: 0.95 },
+      animate: { opacity: 1, scale: 1 },
+      exit: { opacity: 0, scale: 0.95 }
+    },
+    breadcrumbs: {
+      initial: { opacity: 0, y: 20 },
+      animate: { opacity: 1, y: 0 },
+      exit: { opacity: 0, y: -20 }
+    }
+  }
+
   return (
     <div className="min-h-screen bg-surface-dark text-white">
       {/* Background gradient */}
       <div className="fixed inset-0 bg-gradient-to-br from-surface-dark via-surface to-surface-dark pointer-events-none" />
       <div className="fixed inset-0 one-thing-spotlight pointer-events-none opacity-50" />
-      
+
       {/* Energy Check-In Modal */}
       <AnimatePresence>
         {showEnergyCheckIn && (
-          <EnergyCheckIn 
+          <EnergyCheckIn
             onSubmit={handleEnergySubmit}
             onSkip={() => setShowEnergyCheckIn(false)}
           />
         )}
       </AnimatePresence>
-      
+
       {/* Main container */}
       <div className="relative max-w-2xl mx-auto min-h-screen flex flex-col">
-        {/* Header */}
+        {/* Header - simplified, less height */}
         <header className="sticky top-0 z-40 backdrop-blur-xl bg-surface-dark/80 border-b border-white/5">
           <div className="px-4 py-3 flex items-center justify-between">
             {/* Logo & Name */}
@@ -175,33 +211,37 @@ export default function App() {
               </div>
               <div>
                 <h1 className="font-display font-semibold text-lg">Nero</h1>
-                <p className="text-xs text-white/50">Your ADHD companion</p>
+                <p className="text-xs text-white/50 hidden sm:block">Your ADHD companion</p>
               </div>
             </div>
-            
+
             {/* Right side controls */}
             <div className="flex items-center gap-2">
-              {/* Energy indicator */}
-              <button 
-                onClick={() => setShowEnergyCheckIn(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 hover:bg-white/10 transition-colors"
+              {/* Quick interrupt button */}
+              <button
+                onClick={handleInterrupt}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-full bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-300 transition-colors min-h-[44px]"
+                title="Drop a breadcrumb - I got interrupted!"
               >
-                {energyLevel <= 2 ? (
-                  <BatteryLow className="w-4 h-4 text-orange-400" />
-                ) : energyLevel === 3 ? (
-                  <BatteryMedium className="w-4 h-4 text-yellow-400" />
-                ) : (
-                  <BatteryFull className="w-4 h-4 text-green-400" />
-                )}
-                <span className="text-xs font-medium">{energyLevel}/5</span>
+                <AlertCircle className="w-4 h-4" />
+                <span className="text-xs font-medium hidden sm:inline">Interrupted!</span>
               </button>
-              
+
+              {/* Energy indicator */}
+              <button
+                onClick={() => setShowEnergyCheckIn(true)}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors min-h-[44px]"
+              >
+                <EnergyIcon className={`w-4 h-4 ${energyDisplay.color}`} />
+                <span className="text-xs font-medium">{energyDisplay.label}</span>
+              </button>
+
               {/* Thinking stream toggle */}
               <button
                 onClick={toggleThinkingStream}
-                className={`p-2 rounded-full transition-colors ${
-                  thinkingStreamLevel !== 'off' 
-                    ? 'bg-nero-500/20 text-nero-400' 
+                className={`p-2 rounded-full transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center ${
+                  thinkingStreamLevel !== 'off'
+                    ? 'bg-nero-500/20 text-nero-400'
                     : 'bg-white/5 text-white/50 hover:bg-white/10'
                 }`}
                 title={`Thinking stream: ${thinkingStreamLevel}`}
@@ -214,42 +254,18 @@ export default function App() {
               </button>
             </div>
           </div>
-          
-          {/* View mode tabs */}
-          <div className="px-4 pb-2 flex gap-1">
-            {[
-              { id: VIEW_MODES.CONVERSATION, icon: MessageCircle, label: 'Chat' },
-              { id: VIEW_MODES.ONE_THING, icon: Target, label: 'One Thing' },
-              { id: VIEW_MODES.BREADCRUMBS, icon: MapPin, label: 'Trail' },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setViewMode(tab.id)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                  viewMode === tab.id
-                    ? 'bg-nero-500/20 text-nero-400'
-                    : 'text-white/50 hover:text-white/80 hover:bg-white/5'
-                }`}
-              >
-                <tab.icon className="w-4 h-4" />
-                {tab.label}
-              </button>
-            ))}
-          </div>
         </header>
-        
-        {/* Main content area */}
-        <main className="flex-1 overflow-hidden">
+
+        {/* Main content area - adjusted padding for bottom nav */}
+        <main className="flex-1 overflow-hidden pb-20">
           <AnimatePresence mode="wait">
             {viewMode === VIEW_MODES.CONVERSATION && (
               <motion.div
                 key="conversation"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
+                {...getMotionProps(prefersReducedMotion, pageVariants.conversation)}
                 className="h-full"
               >
-                <ConversationView 
+                <ConversationView
                   messages={messages}
                   setMessages={setMessages}
                   thinkingStreamLevel={thinkingStreamLevel}
@@ -257,42 +273,42 @@ export default function App() {
                 />
               </motion.div>
             )}
-            
+
             {viewMode === VIEW_MODES.ONE_THING && (
               <motion.div
                 key="one-thing"
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
+                {...getMotionProps(prefersReducedMotion, pageVariants.oneThing)}
                 className="h-full"
               >
-                <OneThingMode 
+                <OneThingMode
                   task={currentTask}
                   onComplete={handleTaskComplete}
-                  onSkip={() => setCurrentTask(prev => ({ ...prev, title: 'Check your calendar for Sunday' }))}
+                  onSkip={() => setCurrentTask(prev => ({
+                    ...prev,
+                    title: 'Check your calendar for Sunday',
+                    isCompleted: false
+                  }))}
                   energyLevel={energyLevel}
                 />
               </motion.div>
             )}
-            
+
             {viewMode === VIEW_MODES.BREADCRUMBS && (
               <motion.div
                 key="breadcrumbs"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
+                {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)}
                 className="h-full"
               >
-                <BreadcrumbTrail 
+                <BreadcrumbTrail
                   breadcrumbs={breadcrumbs}
                   onResolve={resolveBreadcrumb}
                   onJumpTo={(breadcrumb) => {
                     setCurrentTask({
                       id: breadcrumb.id,
-                      title: breadcrumb.nextStep || breadcrumb.activity,
+                      title: breadcrumb.activity,
                       description: breadcrumb.context,
                       energyRequired: 2,
-                      reason: `Getting back to: ${breadcrumb.activity}`,
+                      reason: `Getting back to where you left off`,
                       isCompleted: false,
                     })
                     setViewMode(VIEW_MODES.ONE_THING)
@@ -302,6 +318,39 @@ export default function App() {
             )}
           </AnimatePresence>
         </main>
+
+        {/* Bottom Navigation - Mobile-first design */}
+        <nav className="fixed bottom-0 left-0 right-0 z-40 backdrop-blur-xl bg-surface-dark/90 border-t border-white/10 safe-area-bottom">
+          <div className="max-w-2xl mx-auto">
+            <div className="flex justify-around items-center px-2 py-2">
+              {[
+                { id: VIEW_MODES.CONVERSATION, icon: MessageCircle, label: 'Chat' },
+                { id: VIEW_MODES.ONE_THING, icon: Target, label: 'One Thing' },
+                { id: VIEW_MODES.BREADCRUMBS, icon: MapPin, label: 'Trail', badge: breadcrumbs.length },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setViewMode(tab.id)}
+                  className={`relative flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-all min-h-[56px] min-w-[72px] ${
+                    viewMode === tab.id
+                      ? 'bg-nero-500/20 text-nero-400'
+                      : 'text-white/50 hover:text-white/80 hover:bg-white/5'
+                  }`}
+                >
+                  <div className="relative">
+                    <tab.icon className="w-6 h-6" />
+                    {tab.badge > 0 && (
+                      <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-nero-500 text-white text-[10px] font-bold flex items-center justify-center">
+                        {tab.badge > 9 ? '9+' : tab.badge}
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-xs font-medium">{tab.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </nav>
       </div>
     </div>
   )
