@@ -9,7 +9,8 @@ import {
   BarChart3,
   AlertCircle,
   Battery,
-  Keyboard
+  Keyboard,
+  Brain
 } from 'lucide-react'
 import { useReducedMotion, getMotionProps } from '../hooks/useReducedMotion'
 
@@ -29,6 +30,7 @@ const SHORTCUT_GROUPS = [
     title: 'Actions',
     shortcuts: [
       { key: 'Space', description: 'Start/Stop timer or Complete task', icon: Target },
+      { key: 'Q', description: 'Quick capture / Brain dump', icon: Brain },
       { key: 'I', description: 'Drop a breadcrumb (Interrupted!)', icon: AlertCircle },
       { key: 'E', description: 'Open energy check-in', icon: Battery },
       { key: 'R', description: 'Reset timer', icon: Timer },

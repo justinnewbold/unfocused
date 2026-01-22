@@ -44,7 +44,7 @@ const getPresets = (energyLevel) => {
   }
 }
 
-export default function FocusTimer({ energyLevel, onSessionComplete }) {
+export default function FocusTimer({ energyLevel, onSessionComplete, onTimerStateChange }) {
   const prefersReducedMotion = useReducedMotion()
   const presets = getPresets(energyLevel)
 
@@ -141,6 +141,11 @@ export default function FocusTimer({ energyLevel, onSessionComplete }) {
       setTimeLeft(newPresets.work * 60)
     }
   }, [energyLevel])
+
+  // Notify parent of timer state changes
+  useEffect(() => {
+    onTimerStateChange?.(isRunning)
+  }, [isRunning, onTimerStateChange])
 
   const toggleTimer = () => setIsRunning(prev => !prev)
 

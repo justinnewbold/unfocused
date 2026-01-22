@@ -30,6 +30,9 @@ import ConversationView from './components/ConversationView'
 import FocusTimer from './components/FocusTimer'
 import InsightsDashboard, { updateStat, initTodayStats } from './components/InsightsDashboard'
 import KeyboardShortcuts from './components/KeyboardShortcuts'
+import QuickCapture from './components/QuickCapture'
+import AmbientSounds from './components/AmbientSounds'
+import Celebration, { useCelebration } from './components/Celebration'
 
 // View modes
 const VIEW_MODES = {
@@ -53,6 +56,13 @@ export default function App() {
   // Stats tracking
   const [tasksCompleted, setTasksCompleted] = useState(0)
   const [focusSessions, setFocusSessions] = useState(0)
+  const [isTimerRunning, setIsTimerRunning] = useState(false)
+
+  // Celebration system
+  const { celebration, celebrate, dismiss: dismissCelebration } = useCelebration()
+
+  // Quick captures storage
+  const [captures, setCaptures] = useState([])
 
   // Initialize stats on mount
   useEffect(() => {
@@ -128,23 +138,52 @@ export default function App() {
 
   const handleTaskComplete = () => {
     setCurrentTask(prev => ({ ...prev, isCompleted: true }))
-    setTasksCompleted(prev => prev + 1)
+    const newCount = tasksCompleted + 1
+    setTasksCompleted(newCount)
     updateStat('tasksCompleted', 1, 'increment')
 
-    // Celebration message
+    // Trigger celebration
+    celebrate('task', newCount)
+
+    // Celebration message (delayed for after confetti)
     setTimeout(() => {
       setMessages(prev => [...prev, {
         role: 'assistant',
         content: "Done! That's momentum building. Want to tackle another quick win, or check your breadcrumbs?",
         thinking: null,
       }])
-    }, 1000)
+    }, 2000)
   }
 
   // Focus session complete handler
   const handleFocusSessionComplete = (totalSessions) => {
     setFocusSessions(totalSessions)
     updateStat('focusSessions', 1, 'increment')
+
+    // Trigger celebration
+    celebrate('session', totalSessions)
+  }
+
+  // Quick capture handler
+  const handleQuickCapture = (capture) => {
+    setCaptures(prev => [capture, ...prev])
+
+    // Add feedback message from Nero
+    setMessages(prev => [...prev, {
+      role: 'assistant',
+      content: capture.type === 'task'
+        ? `Got it! I've added "${capture.text}" to your tasks. You can tackle it when you're ready.`
+        : capture.type === 'idea'
+          ? `Interesting idea captured! "${capture.text}" - I'll keep it safe for when you want to explore it.`
+          : `Thought captured: "${capture.text}" - Your brain thanks you for the dump!`,
+      thinking: null,
+    }])
+  }
+
+  // Create task from quick capture
+  const handleCreateTaskFromCapture = (task) => {
+    setCurrentTask(task)
+    setViewMode(VIEW_MODES.ONE_THING)
   }
 
   const resolveBreadcrumb = (id) => {
@@ -196,6 +235,9 @@ export default function App() {
   const energyDisplay = getEnergyDisplay()
   const EnergyIcon = energyDisplay.icon
 
+  // State for quick capture modal
+  const [showQuickCapture, setShowQuickCapture] = useState(false)
+
   // Keyboard shortcuts configuration
   const shortcuts = useMemo(() => [
     // Navigation shortcuts (1-5)
@@ -207,6 +249,7 @@ export default function App() {
     // Action shortcuts
     { key: 'i', action: handleInterrupt },
     { key: 'e', action: () => setShowEnergyCheckIn(true) },
+    { key: 'q', action: () => setShowQuickCapture(true) },
     // Space for context-sensitive action
     {
       key: ' ',
@@ -392,6 +435,7 @@ export default function App() {
                 <FocusTimer
                   energyLevel={energyLevel}
                   onSessionComplete={handleFocusSessionComplete}
+                  onTimerStateChange={setIsTimerRunning}
                 />
               </motion.div>
             )}
@@ -417,6 +461,21 @@ export default function App() {
         <KeyboardShortcuts
           show={showShortcutsHelp}
           onClose={() => setShowShortcutsHelp(false)}
+        />
+
+        {/* Quick Capture FAB and Modal */}
+        <QuickCapture
+          onCapture={handleQuickCapture}
+          onCreateTask={handleCreateTaskFromCapture}
+        />
+
+        {/* Ambient Sounds Mini Player */}
+        <AmbientSounds isTimerRunning={isTimerRunning} />
+
+        {/* Celebration Overlay */}
+        <Celebration
+          celebration={celebration}
+          onDismiss={dismissCelebration}
         />
 
         {/* Bottom Navigation - Mobile-first design */}
