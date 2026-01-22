@@ -16,7 +16,9 @@ import {
   BarChart3,
   Keyboard,
   ListTodo,
-  CalendarCheck
+  CalendarCheck,
+  AlertTriangle,
+  Clock
 } from 'lucide-react'
 
 // Import hooks
@@ -38,6 +40,9 @@ import Celebration, { useCelebration } from './components/Celebration'
 import TaskQueue from './components/TaskQueue'
 import DailyRoutines from './components/DailyRoutines'
 import BodyDoubling from './components/BodyDoubling'
+import DistractionLog from './components/DistractionLog'
+import TimeEstimation from './components/TimeEstimation'
+import FocusShield from './components/FocusShield'
 
 // View modes
 const VIEW_MODES = {
@@ -48,6 +53,8 @@ const VIEW_MODES = {
   INSIGHTS: 'insights',
   TASK_QUEUE: 'task_queue',
   ROUTINES: 'routines',
+  DISTRACTIONS: 'distractions',
+  TIME_TRAINING: 'time_training',
 }
 
 export default function App() {
@@ -70,6 +77,9 @@ export default function App() {
 
   // Quick captures storage
   const [captures, setCaptures] = useState([])
+
+  // Focus shield state
+  const [isShieldActive, setIsShieldActive] = useState(false)
 
   // Initialize stats on mount
   useEffect(() => {
@@ -209,6 +219,33 @@ export default function App() {
     celebrate('task', tasksCompleted + 1)
   }
 
+  // Distraction log handler
+  const handleLogDistraction = (entry) => {
+    setMessages(prev => [...prev, {
+      role: 'assistant',
+      content: `Logged distraction: ${entry.type}. Tracking these helps identify patterns. Stay aware!`,
+      thinking: null,
+    }])
+  }
+
+  // Time estimation complete handler
+  const handleTimeEstimationComplete = (entry) => {
+    const accuracy = entry.accuracy
+    let message
+    if (accuracy >= 80) {
+      message = `Great estimate! You were ${accuracy}% accurate. Your time sense is improving!`
+    } else if (accuracy >= 50) {
+      message = `Not bad! ${accuracy}% accuracy. Task took ${entry.actualMinutes}m vs your ${entry.estimatedMinutes}m estimate.`
+    } else {
+      message = `This one was tricky - ${accuracy}% accuracy. Tasks like this typically take longer than we think!`
+    }
+    setMessages(prev => [...prev, {
+      role: 'assistant',
+      content: message,
+      thinking: null,
+    }])
+  }
+
   const resolveBreadcrumb = (id) => {
     setBreadcrumbs(prev => prev.filter(b => b.id !== id))
     updateStat('breadcrumbsResolved', 1, 'increment')
@@ -263,7 +300,7 @@ export default function App() {
 
   // Keyboard shortcuts configuration
   const shortcuts = useMemo(() => [
-    // Navigation shortcuts (1-7)
+    // Navigation shortcuts (1-9)
     { key: '1', action: () => setViewMode(VIEW_MODES.CONVERSATION) },
     { key: '2', action: () => setViewMode(VIEW_MODES.ONE_THING) },
     { key: '3', action: () => setViewMode(VIEW_MODES.BREADCRUMBS) },
@@ -271,6 +308,8 @@ export default function App() {
     { key: '5', action: () => setViewMode(VIEW_MODES.INSIGHTS) },
     { key: '6', action: () => setViewMode(VIEW_MODES.TASK_QUEUE) },
     { key: '7', action: () => setViewMode(VIEW_MODES.ROUTINES) },
+    { key: '8', action: () => setViewMode(VIEW_MODES.TIME_TRAINING) },
+    { key: '9', action: () => setViewMode(VIEW_MODES.DISTRACTIONS) },
     // Action shortcuts
     { key: 'i', action: handleInterrupt },
     { key: 'e', action: () => setShowEnergyCheckIn(true) },
@@ -503,6 +542,29 @@ export default function App() {
                 <DailyRoutines onComplete={handleRoutineComplete} />
               </motion.div>
             )}
+
+            {viewMode === VIEW_MODES.DISTRACTIONS && (
+              <motion.div
+                key="distractions"
+                {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)}
+                className="h-full"
+              >
+                <DistractionLog onLogDistraction={handleLogDistraction} />
+              </motion.div>
+            )}
+
+            {viewMode === VIEW_MODES.TIME_TRAINING && (
+              <motion.div
+                key="time-training"
+                {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)}
+                className="h-full"
+              >
+                <TimeEstimation
+                  currentTask={currentTask}
+                  onCompleteTask={handleTimeEstimationComplete}
+                />
+              </motion.div>
+            )}
           </AnimatePresence>
         </main>
 
@@ -533,43 +595,51 @@ export default function App() {
           }}
         />
 
+        {/* Focus Shield */}
+        <FocusShield
+          isTimerRunning={isTimerRunning}
+          onShieldChange={setIsShieldActive}
+        />
+
         {/* Celebration Overlay */}
         <Celebration
           celebration={celebration}
           onDismiss={dismissCelebration}
         />
 
-        {/* Bottom Navigation - Mobile-first design */}
+        {/* Bottom Navigation - Mobile-first design with scroll */}
         <nav className="fixed bottom-0 left-0 right-0 z-40 backdrop-blur-xl bg-surface-dark/90 border-t border-white/10 safe-area-bottom">
-          <div className="max-w-2xl mx-auto">
-            <div className="flex justify-around items-center px-2 py-2">
+          <div className="max-w-2xl mx-auto overflow-x-auto scrollbar-hide">
+            <div className="flex items-center px-2 py-2 min-w-max">
               {[
                 { id: VIEW_MODES.CONVERSATION, icon: MessageCircle, label: 'Chat' },
                 { id: VIEW_MODES.ONE_THING, icon: Target, label: 'Focus' },
                 { id: VIEW_MODES.TASK_QUEUE, icon: ListTodo, label: 'Tasks' },
-                { id: VIEW_MODES.ROUTINES, icon: CalendarCheck, label: 'Routines' },
                 { id: VIEW_MODES.FOCUS_TIMER, icon: Timer, label: 'Timer' },
+                { id: VIEW_MODES.ROUTINES, icon: CalendarCheck, label: 'Routines' },
                 { id: VIEW_MODES.BREADCRUMBS, icon: MapPin, label: 'Trail', badge: breadcrumbs.length },
+                { id: VIEW_MODES.TIME_TRAINING, icon: Clock, label: 'Time' },
+                { id: VIEW_MODES.DISTRACTIONS, icon: AlertTriangle, label: 'Distractions' },
                 { id: VIEW_MODES.INSIGHTS, icon: BarChart3, label: 'Stats' },
               ].map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setViewMode(tab.id)}
-                  className={`relative flex flex-col items-center gap-0.5 px-2 sm:px-3 py-2 rounded-xl transition-all min-h-[52px] ${
+                  className={`relative flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-all min-h-[52px] min-w-[60px] ${
                     viewMode === tab.id
                       ? 'bg-nero-500/20 text-nero-400'
                       : 'text-white/50 hover:text-white/80 hover:bg-white/5'
                   }`}
                 >
                   <div className="relative">
-                    <tab.icon className="w-5 h-5 sm:w-6 sm:h-6" />
+                    <tab.icon className="w-5 h-5" />
                     {tab.badge > 0 && (
                       <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-nero-500 text-white text-[10px] font-bold flex items-center justify-center">
                         {tab.badge > 9 ? '9+' : tab.badge}
                       </span>
                     )}
                   </div>
-                  <span className="text-[10px] sm:text-xs font-medium">{tab.label}</span>
+                  <span className="text-[10px] font-medium whitespace-nowrap">{tab.label}</span>
                 </button>
               ))}
             </div>

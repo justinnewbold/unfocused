@@ -12,7 +12,9 @@ import {
   Keyboard,
   Brain,
   ListTodo,
-  CalendarCheck
+  CalendarCheck,
+  Clock,
+  AlertTriangle
 } from 'lucide-react'
 import { useReducedMotion, getMotionProps } from '../hooks/useReducedMotion'
 
@@ -28,6 +30,8 @@ const SHORTCUT_GROUPS = [
       { key: '5', description: 'Go to Insights', icon: BarChart3 },
       { key: '6', description: 'Go to Task Queue', icon: ListTodo },
       { key: '7', description: 'Go to Routines', icon: CalendarCheck },
+      { key: '8', description: 'Go to Time Training', icon: Clock },
+      { key: '9', description: 'Go to Distractions', icon: AlertTriangle },
     ]
   },
   {
