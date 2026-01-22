@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   MessageCircle,
@@ -11,11 +11,15 @@ import {
   MapPin,
   Eye,
   EyeOff,
-  AlertCircle
+  AlertCircle,
+  Timer,
+  BarChart3,
+  Keyboard
 } from 'lucide-react'
 
 // Import hooks
 import { useReducedMotion, getMotionProps } from './hooks/useReducedMotion'
+import { useKeyboardShortcuts, useShortcutsHelp } from './hooks/useKeyboardShortcuts'
 
 // Import components
 import EnergyCheckIn from './components/EnergyCheckIn'
@@ -23,22 +27,37 @@ import BreadcrumbTrail from './components/BreadcrumbTrail'
 import OneThingMode from './components/OneThingMode'
 import ThinkingStream from './components/ThinkingStream'
 import ConversationView from './components/ConversationView'
+import FocusTimer from './components/FocusTimer'
+import InsightsDashboard, { updateStat, initTodayStats } from './components/InsightsDashboard'
+import KeyboardShortcuts from './components/KeyboardShortcuts'
 
 // View modes
 const VIEW_MODES = {
   CONVERSATION: 'conversation',
   ONE_THING: 'one_thing',
   BREADCRUMBS: 'breadcrumbs',
+  FOCUS_TIMER: 'focus_timer',
+  INSIGHTS: 'insights',
 }
 
 export default function App() {
   const prefersReducedMotion = useReducedMotion()
+  const { showHelp: showShortcutsHelp, setShowHelp: setShowShortcutsHelp } = useShortcutsHelp()
 
   // Core state
   const [viewMode, setViewMode] = useState(VIEW_MODES.CONVERSATION)
   const [energyLevel, setEnergyLevel] = useState(3)
   const [showEnergyCheckIn, setShowEnergyCheckIn] = useState(false)
   const [thinkingStreamLevel, setThinkingStreamLevel] = useState('off') // Defaulted to off for less cognitive load
+
+  // Stats tracking
+  const [tasksCompleted, setTasksCompleted] = useState(0)
+  const [focusSessions, setFocusSessions] = useState(0)
+
+  // Initialize stats on mount
+  useEffect(() => {
+    initTodayStats()
+  }, [])
 
   // Demo data for breadcrumbs - simplified structure (what + why)
   const [breadcrumbs, setBreadcrumbs] = useState([
@@ -96,6 +115,9 @@ export default function App() {
     setShowEnergyCheckIn(false)
     localStorage.setItem('lastEnergyCheckIn', new Date().toDateString())
 
+    // Track energy level in insights
+    updateStat('energyLevels', level, 'push')
+
     // Add a contextual message from Nero
     setMessages(prev => [...prev, {
       role: 'assistant',
@@ -106,6 +128,8 @@ export default function App() {
 
   const handleTaskComplete = () => {
     setCurrentTask(prev => ({ ...prev, isCompleted: true }))
+    setTasksCompleted(prev => prev + 1)
+    updateStat('tasksCompleted', 1, 'increment')
 
     // Celebration message
     setTimeout(() => {
@@ -117,8 +141,15 @@ export default function App() {
     }, 1000)
   }
 
+  // Focus session complete handler
+  const handleFocusSessionComplete = (totalSessions) => {
+    setFocusSessions(totalSessions)
+    updateStat('focusSessions', 1, 'increment')
+  }
+
   const resolveBreadcrumb = (id) => {
     setBreadcrumbs(prev => prev.filter(b => b.id !== id))
+    updateStat('breadcrumbsResolved', 1, 'increment')
   }
 
   const toggleThinkingStream = () => {
@@ -129,7 +160,7 @@ export default function App() {
   }
 
   // Quick interrupt handler - drops a breadcrumb instantly
-  const handleInterrupt = () => {
+  const handleInterrupt = useCallback(() => {
     const newBreadcrumb = {
       id: Date.now().toString(),
       activity: currentTask.title || 'Current task',
@@ -138,6 +169,7 @@ export default function App() {
     }
 
     setBreadcrumbs(prev => [newBreadcrumb, ...prev])
+    updateStat('breadcrumbsDropped', 1, 'increment')
 
     // Add feedback message
     setMessages(prev => [...prev, {
@@ -148,7 +180,7 @@ export default function App() {
 
     // Switch to breadcrumbs view to show it worked
     setViewMode(VIEW_MODES.BREADCRUMBS)
-  }
+  }, [currentTask.title, setMessages])
 
   // Get energy display info
   const getEnergyDisplay = () => {
@@ -163,6 +195,31 @@ export default function App() {
 
   const energyDisplay = getEnergyDisplay()
   const EnergyIcon = energyDisplay.icon
+
+  // Keyboard shortcuts configuration
+  const shortcuts = useMemo(() => [
+    // Navigation shortcuts (1-5)
+    { key: '1', action: () => setViewMode(VIEW_MODES.CONVERSATION) },
+    { key: '2', action: () => setViewMode(VIEW_MODES.ONE_THING) },
+    { key: '3', action: () => setViewMode(VIEW_MODES.BREADCRUMBS) },
+    { key: '4', action: () => setViewMode(VIEW_MODES.FOCUS_TIMER) },
+    { key: '5', action: () => setViewMode(VIEW_MODES.INSIGHTS) },
+    // Action shortcuts
+    { key: 'i', action: handleInterrupt },
+    { key: 'e', action: () => setShowEnergyCheckIn(true) },
+    // Space for context-sensitive action
+    {
+      key: ' ',
+      action: () => {
+        if (viewMode === VIEW_MODES.ONE_THING && !currentTask.isCompleted) {
+          handleTaskComplete()
+        }
+      }
+    },
+  ], [viewMode, currentTask.isCompleted, handleInterrupt])
+
+  // Register keyboard shortcuts
+  useKeyboardShortcuts(shortcuts)
 
   // Animation variants
   const pageVariants = {
@@ -252,6 +309,15 @@ export default function App() {
                   <Eye className="w-4 h-4" />
                 )}
               </button>
+
+              {/* Keyboard shortcuts hint */}
+              <button
+                onClick={() => setShowShortcutsHelp(true)}
+                className="p-2 rounded-full bg-white/5 text-white/50 hover:bg-white/10 hover:text-white/70 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center hidden sm:flex"
+                title="Keyboard shortcuts (?)"
+              >
+                <Keyboard className="w-4 h-4" />
+              </button>
             </div>
           </div>
         </header>
@@ -316,36 +382,72 @@ export default function App() {
                 />
               </motion.div>
             )}
+
+            {viewMode === VIEW_MODES.FOCUS_TIMER && (
+              <motion.div
+                key="focus-timer"
+                {...getMotionProps(prefersReducedMotion, pageVariants.oneThing)}
+                className="h-full"
+              >
+                <FocusTimer
+                  energyLevel={energyLevel}
+                  onSessionComplete={handleFocusSessionComplete}
+                />
+              </motion.div>
+            )}
+
+            {viewMode === VIEW_MODES.INSIGHTS && (
+              <motion.div
+                key="insights"
+                {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)}
+                className="h-full"
+              >
+                <InsightsDashboard
+                  tasksCompleted={tasksCompleted}
+                  focusSessions={focusSessions}
+                  breadcrumbsCount={breadcrumbs.length}
+                  energyLevel={energyLevel}
+                />
+              </motion.div>
+            )}
           </AnimatePresence>
         </main>
+
+        {/* Keyboard Shortcuts Help Overlay */}
+        <KeyboardShortcuts
+          show={showShortcutsHelp}
+          onClose={() => setShowShortcutsHelp(false)}
+        />
 
         {/* Bottom Navigation - Mobile-first design */}
         <nav className="fixed bottom-0 left-0 right-0 z-40 backdrop-blur-xl bg-surface-dark/90 border-t border-white/10 safe-area-bottom">
           <div className="max-w-2xl mx-auto">
             <div className="flex justify-around items-center px-2 py-2">
               {[
-                { id: VIEW_MODES.CONVERSATION, icon: MessageCircle, label: 'Chat' },
-                { id: VIEW_MODES.ONE_THING, icon: Target, label: 'One Thing' },
-                { id: VIEW_MODES.BREADCRUMBS, icon: MapPin, label: 'Trail', badge: breadcrumbs.length },
+                { id: VIEW_MODES.CONVERSATION, icon: MessageCircle, label: 'Chat', shortcut: '1' },
+                { id: VIEW_MODES.ONE_THING, icon: Target, label: 'One Thing', shortcut: '2' },
+                { id: VIEW_MODES.BREADCRUMBS, icon: MapPin, label: 'Trail', badge: breadcrumbs.length, shortcut: '3' },
+                { id: VIEW_MODES.FOCUS_TIMER, icon: Timer, label: 'Timer', shortcut: '4' },
+                { id: VIEW_MODES.INSIGHTS, icon: BarChart3, label: 'Insights', shortcut: '5' },
               ].map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setViewMode(tab.id)}
-                  className={`relative flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-all min-h-[56px] min-w-[72px] ${
+                  className={`relative flex flex-col items-center gap-0.5 px-2 sm:px-3 py-2 rounded-xl transition-all min-h-[52px] ${
                     viewMode === tab.id
                       ? 'bg-nero-500/20 text-nero-400'
                       : 'text-white/50 hover:text-white/80 hover:bg-white/5'
                   }`}
                 >
                   <div className="relative">
-                    <tab.icon className="w-6 h-6" />
+                    <tab.icon className="w-5 h-5 sm:w-6 sm:h-6" />
                     {tab.badge > 0 && (
                       <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-nero-500 text-white text-[10px] font-bold flex items-center justify-center">
                         {tab.badge > 9 ? '9+' : tab.badge}
                       </span>
                     )}
                   </div>
-                  <span className="text-xs font-medium">{tab.label}</span>
+                  <span className="text-[10px] sm:text-xs font-medium">{tab.label}</span>
                 </button>
               ))}
             </div>
