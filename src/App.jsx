@@ -14,7 +14,9 @@ import {
   AlertCircle,
   Timer,
   BarChart3,
-  Keyboard
+  Keyboard,
+  ListTodo,
+  CalendarCheck
 } from 'lucide-react'
 
 // Import hooks
@@ -33,6 +35,9 @@ import KeyboardShortcuts from './components/KeyboardShortcuts'
 import QuickCapture from './components/QuickCapture'
 import AmbientSounds from './components/AmbientSounds'
 import Celebration, { useCelebration } from './components/Celebration'
+import TaskQueue from './components/TaskQueue'
+import DailyRoutines from './components/DailyRoutines'
+import BodyDoubling from './components/BodyDoubling'
 
 // View modes
 const VIEW_MODES = {
@@ -41,6 +46,8 @@ const VIEW_MODES = {
   BREADCRUMBS: 'breadcrumbs',
   FOCUS_TIMER: 'focus_timer',
   INSIGHTS: 'insights',
+  TASK_QUEUE: 'task_queue',
+  ROUTINES: 'routines',
 }
 
 export default function App() {
@@ -186,6 +193,22 @@ export default function App() {
     setViewMode(VIEW_MODES.ONE_THING)
   }
 
+  // Select task from queue
+  const handleSelectTask = (task) => {
+    setCurrentTask(task)
+    setViewMode(VIEW_MODES.ONE_THING)
+  }
+
+  // Routine completion handler
+  const handleRoutineComplete = (routineId) => {
+    setMessages(prev => [...prev, {
+      role: 'assistant',
+      content: `Great job completing your ${routineId} routine! Consistency is key, and you're building great habits.`,
+      thinking: null,
+    }])
+    celebrate('task', tasksCompleted + 1)
+  }
+
   const resolveBreadcrumb = (id) => {
     setBreadcrumbs(prev => prev.filter(b => b.id !== id))
     updateStat('breadcrumbsResolved', 1, 'increment')
@@ -240,12 +263,14 @@ export default function App() {
 
   // Keyboard shortcuts configuration
   const shortcuts = useMemo(() => [
-    // Navigation shortcuts (1-5)
+    // Navigation shortcuts (1-7)
     { key: '1', action: () => setViewMode(VIEW_MODES.CONVERSATION) },
     { key: '2', action: () => setViewMode(VIEW_MODES.ONE_THING) },
     { key: '3', action: () => setViewMode(VIEW_MODES.BREADCRUMBS) },
     { key: '4', action: () => setViewMode(VIEW_MODES.FOCUS_TIMER) },
     { key: '5', action: () => setViewMode(VIEW_MODES.INSIGHTS) },
+    { key: '6', action: () => setViewMode(VIEW_MODES.TASK_QUEUE) },
+    { key: '7', action: () => setViewMode(VIEW_MODES.ROUTINES) },
     // Action shortcuts
     { key: 'i', action: handleInterrupt },
     { key: 'e', action: () => setShowEnergyCheckIn(true) },
@@ -454,6 +479,30 @@ export default function App() {
                 />
               </motion.div>
             )}
+
+            {viewMode === VIEW_MODES.TASK_QUEUE && (
+              <motion.div
+                key="task-queue"
+                {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)}
+                className="h-full"
+              >
+                <TaskQueue
+                  currentEnergy={energyLevel}
+                  onSelectTask={handleSelectTask}
+                  captures={captures}
+                />
+              </motion.div>
+            )}
+
+            {viewMode === VIEW_MODES.ROUTINES && (
+              <motion.div
+                key="routines"
+                {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)}
+                className="h-full"
+              >
+                <DailyRoutines onComplete={handleRoutineComplete} />
+              </motion.div>
+            )}
           </AnimatePresence>
         </main>
 
@@ -472,6 +521,18 @@ export default function App() {
         {/* Ambient Sounds Mini Player */}
         <AmbientSounds isTimerRunning={isTimerRunning} />
 
+        {/* Body Doubling / Accountability Mode */}
+        <BodyDoubling
+          isTimerRunning={isTimerRunning}
+          onRequestBreak={() => {
+            setMessages(prev => [...prev, {
+              role: 'assistant',
+              content: "Taking a break is important! Step away, stretch, hydrate. I'll be here when you're back.",
+              thinking: null,
+            }])
+          }}
+        />
+
         {/* Celebration Overlay */}
         <Celebration
           celebration={celebration}
@@ -483,11 +544,13 @@ export default function App() {
           <div className="max-w-2xl mx-auto">
             <div className="flex justify-around items-center px-2 py-2">
               {[
-                { id: VIEW_MODES.CONVERSATION, icon: MessageCircle, label: 'Chat', shortcut: '1' },
-                { id: VIEW_MODES.ONE_THING, icon: Target, label: 'One Thing', shortcut: '2' },
-                { id: VIEW_MODES.BREADCRUMBS, icon: MapPin, label: 'Trail', badge: breadcrumbs.length, shortcut: '3' },
-                { id: VIEW_MODES.FOCUS_TIMER, icon: Timer, label: 'Timer', shortcut: '4' },
-                { id: VIEW_MODES.INSIGHTS, icon: BarChart3, label: 'Insights', shortcut: '5' },
+                { id: VIEW_MODES.CONVERSATION, icon: MessageCircle, label: 'Chat' },
+                { id: VIEW_MODES.ONE_THING, icon: Target, label: 'Focus' },
+                { id: VIEW_MODES.TASK_QUEUE, icon: ListTodo, label: 'Tasks' },
+                { id: VIEW_MODES.ROUTINES, icon: CalendarCheck, label: 'Routines' },
+                { id: VIEW_MODES.FOCUS_TIMER, icon: Timer, label: 'Timer' },
+                { id: VIEW_MODES.BREADCRUMBS, icon: MapPin, label: 'Trail', badge: breadcrumbs.length },
+                { id: VIEW_MODES.INSIGHTS, icon: BarChart3, label: 'Stats' },
               ].map((tab) => (
                 <button
                   key={tab.id}

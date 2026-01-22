@@ -10,7 +10,9 @@ import {
   AlertCircle,
   Battery,
   Keyboard,
-  Brain
+  Brain,
+  ListTodo,
+  CalendarCheck
 } from 'lucide-react'
 import { useReducedMotion, getMotionProps } from '../hooks/useReducedMotion'
 
@@ -20,10 +22,12 @@ const SHORTCUT_GROUPS = [
     title: 'Navigation',
     shortcuts: [
       { key: '1', description: 'Go to Chat', icon: MessageCircle },
-      { key: '2', description: 'Go to One Thing', icon: Target },
+      { key: '2', description: 'Go to Focus', icon: Target },
       { key: '3', description: 'Go to Breadcrumbs', icon: MapPin },
       { key: '4', description: 'Go to Focus Timer', icon: Timer },
       { key: '5', description: 'Go to Insights', icon: BarChart3 },
+      { key: '6', description: 'Go to Task Queue', icon: ListTodo },
+      { key: '7', description: 'Go to Routines', icon: CalendarCheck },
     ]
   },
   {
