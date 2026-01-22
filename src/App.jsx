@@ -20,7 +20,10 @@ import {
   AlertTriangle,
   Clock,
   Trophy,
-  Layers
+  Layers,
+  Sparkles,
+  Heart,
+  Calendar,
 } from 'lucide-react'
 
 // Import hooks
@@ -48,6 +51,9 @@ import FocusShield from './components/FocusShield'
 import TransitionHelper from './components/TransitionHelper'
 import RewardSystem, { useRewardSystem, LevelUpModal, XpToast } from './components/RewardSystem'
 import ContextBundles from './components/ContextBundles'
+import SmartSuggestions, { recordTaskStart, recordTaskComplete } from './components/SmartSuggestions'
+import EmotionalRegulation from './components/EmotionalRegulation'
+import WeeklyReview from './components/WeeklyReview'
 
 // View modes
 const VIEW_MODES = {
@@ -62,6 +68,9 @@ const VIEW_MODES = {
   TIME_TRAINING: 'time_training',
   REWARDS: 'rewards',
   BUNDLES: 'bundles',
+  SUGGESTIONS: 'suggestions',
+  EMOTIONS: 'emotions',
+  WEEKLY_REVIEW: 'weekly_review',
 }
 
 export default function App() {
@@ -328,6 +337,42 @@ export default function App() {
     }])
   }
 
+  // Smart suggestions task selection
+  const handleSmartTaskSelect = (task) => {
+    recordTaskStart(task, energyLevel)
+    setCurrentTask(task)
+    setViewMode(VIEW_MODES.ONE_THING)
+  }
+
+  // Mood logging handler
+  const handleMoodLog = (mood, context) => {
+    const moodMessages = {
+      great: "That's wonderful! Let's keep the momentum going.",
+      good: "Glad you're feeling good! What would you like to focus on?",
+      okay: "That's alright. Small steps are still progress.",
+      low: "I hear you. Let's take it easy and find a gentle task.",
+      frustrated: "Frustration is valid. Would a breathing exercise help?",
+      anxious: "Anxiety can be tough. Maybe try the grounding exercise?",
+      overwhelmed: "When overwhelmed, just focus on one tiny thing. I'm here.",
+    }
+
+    setMessages(prev => [...prev, {
+      role: 'assistant',
+      content: moodMessages[mood.id] || "Thanks for checking in. I'm here to help.",
+      thinking: null,
+    }])
+  }
+
+  // Weekly review completion handler
+  const handleWeeklyReviewComplete = (review) => {
+    setMessages(prev => [...prev, {
+      role: 'assistant',
+      content: `Great reflection! You've set ${review.intentions.filter(i => i.trim()).length} intentions for next week. Remember: progress over perfection!`,
+      thinking: null,
+    }])
+    setViewMode(VIEW_MODES.CONVERSATION)
+  }
+
   const resolveBreadcrumb = (id) => {
     setBreadcrumbs(prev => prev.filter(b => b.id !== id))
     updateStat('breadcrumbsResolved', 1, 'increment')
@@ -400,6 +445,9 @@ export default function App() {
     { key: 'i', action: handleInterrupt },
     { key: 'e', action: () => setShowEnergyCheckIn(true) },
     { key: 'q', action: () => setShowQuickCapture(true) },
+    { key: 's', action: () => setViewMode(VIEW_MODES.SUGGESTIONS) },
+    { key: 'f', action: () => setViewMode(VIEW_MODES.EMOTIONS) },
+    { key: 'w', action: () => setViewMode(VIEW_MODES.WEEKLY_REVIEW) },
     // Space for context-sensitive action
     {
       key: ' ',
@@ -674,6 +722,39 @@ export default function App() {
                 />
               </motion.div>
             )}
+
+            {viewMode === VIEW_MODES.SUGGESTIONS && (
+              <motion.div
+                key="suggestions"
+                {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)}
+                className="h-full"
+              >
+                <SmartSuggestions
+                  energyLevel={energyLevel}
+                  onSelectTask={handleSmartTaskSelect}
+                />
+              </motion.div>
+            )}
+
+            {viewMode === VIEW_MODES.EMOTIONS && (
+              <motion.div
+                key="emotions"
+                {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)}
+                className="h-full"
+              >
+                <EmotionalRegulation onMoodLog={handleMoodLog} />
+              </motion.div>
+            )}
+
+            {viewMode === VIEW_MODES.WEEKLY_REVIEW && (
+              <motion.div
+                key="weekly-review"
+                {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)}
+                className="h-full"
+              >
+                <WeeklyReview onComplete={handleWeeklyReviewComplete} />
+              </motion.div>
+            )}
           </AnimatePresence>
         </main>
 
@@ -749,13 +830,14 @@ export default function App() {
               {[
                 { id: VIEW_MODES.CONVERSATION, icon: MessageCircle, label: 'Chat' },
                 { id: VIEW_MODES.ONE_THING, icon: Target, label: 'Focus' },
+                { id: VIEW_MODES.SUGGESTIONS, icon: Sparkles, label: 'Suggest' },
                 { id: VIEW_MODES.TASK_QUEUE, icon: ListTodo, label: 'Tasks' },
                 { id: VIEW_MODES.FOCUS_TIMER, icon: Timer, label: 'Timer' },
                 { id: VIEW_MODES.BUNDLES, icon: Layers, label: 'Modes' },
                 { id: VIEW_MODES.ROUTINES, icon: CalendarCheck, label: 'Routines' },
                 { id: VIEW_MODES.BREADCRUMBS, icon: MapPin, label: 'Trail', badge: breadcrumbs.length },
-                { id: VIEW_MODES.TIME_TRAINING, icon: Clock, label: 'Time' },
-                { id: VIEW_MODES.DISTRACTIONS, icon: AlertTriangle, label: 'Distract' },
+                { id: VIEW_MODES.EMOTIONS, icon: Heart, label: 'Feelings' },
+                { id: VIEW_MODES.WEEKLY_REVIEW, icon: Calendar, label: 'Review' },
                 { id: VIEW_MODES.REWARDS, icon: Trophy, label: 'Rewards' },
                 { id: VIEW_MODES.INSIGHTS, icon: BarChart3, label: 'Stats' },
               ].map((tab) => (

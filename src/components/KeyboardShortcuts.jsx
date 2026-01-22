@@ -15,7 +15,10 @@ import {
   CalendarCheck,
   Clock,
   AlertTriangle,
-  Trophy
+  Trophy,
+  Sparkles,
+  Heart,
+  Calendar,
 } from 'lucide-react'
 import { useReducedMotion, getMotionProps } from '../hooks/useReducedMotion'
 
@@ -43,7 +46,9 @@ const SHORTCUT_GROUPS = [
       { key: 'Q', description: 'Quick capture / Brain dump', icon: Brain },
       { key: 'I', description: 'Drop a breadcrumb (Interrupted!)', icon: AlertCircle },
       { key: 'E', description: 'Open energy check-in', icon: Battery },
-      { key: 'R', description: 'Reset timer', icon: Timer },
+      { key: 'S', description: 'Smart suggestions', icon: Sparkles },
+      { key: 'F', description: 'Feelings / Emotions', icon: Heart },
+      { key: 'W', description: 'Weekly review', icon: Calendar },
     ]
   },
   {
