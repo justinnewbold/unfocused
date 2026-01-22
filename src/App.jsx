@@ -18,7 +18,9 @@ import {
   ListTodo,
   CalendarCheck,
   AlertTriangle,
-  Clock
+  Clock,
+  Trophy,
+  Layers
 } from 'lucide-react'
 
 // Import hooks
@@ -43,6 +45,9 @@ import BodyDoubling from './components/BodyDoubling'
 import DistractionLog from './components/DistractionLog'
 import TimeEstimation from './components/TimeEstimation'
 import FocusShield from './components/FocusShield'
+import TransitionHelper from './components/TransitionHelper'
+import RewardSystem, { useRewardSystem, LevelUpModal, XpToast } from './components/RewardSystem'
+import ContextBundles from './components/ContextBundles'
 
 // View modes
 const VIEW_MODES = {
@@ -55,6 +60,8 @@ const VIEW_MODES = {
   ROUTINES: 'routines',
   DISTRACTIONS: 'distractions',
   TIME_TRAINING: 'time_training',
+  REWARDS: 'rewards',
+  BUNDLES: 'bundles',
 }
 
 export default function App() {
@@ -80,6 +87,17 @@ export default function App() {
 
   // Focus shield state
   const [isShieldActive, setIsShieldActive] = useState(false)
+
+  // Transition helper state
+  const [showTransition, setShowTransition] = useState(false)
+  const [transitionFromTask, setTransitionFromTask] = useState(null)
+  const [transitionToTask, setTransitionToTask] = useState(null)
+
+  // Context bundles state
+  const [activeBundle, setActiveBundle] = useState(null)
+
+  // Reward system
+  const rewards = useRewardSystem()
 
   // Initialize stats on mount
   useEffect(() => {
@@ -159,6 +177,9 @@ export default function App() {
     setTasksCompleted(newCount)
     updateStat('tasksCompleted', 1, 'increment')
 
+    // Record in reward system
+    rewards.recordTaskComplete()
+
     // Trigger celebration
     celebrate('task', newCount)
 
@@ -176,6 +197,9 @@ export default function App() {
   const handleFocusSessionComplete = (totalSessions) => {
     setFocusSessions(totalSessions)
     updateStat('focusSessions', 1, 'increment')
+
+    // Record in reward system
+    rewards.recordFocusSession()
 
     // Trigger celebration
     celebrate('session', totalSessions)
@@ -203,10 +227,15 @@ export default function App() {
     setViewMode(VIEW_MODES.ONE_THING)
   }
 
-  // Select task from queue
-  const handleSelectTask = (task) => {
-    setCurrentTask(task)
-    setViewMode(VIEW_MODES.ONE_THING)
+  // Select task from queue (with optional transition)
+  const handleSelectTask = (task, skipTransition = false) => {
+    if (!skipTransition && currentTask && !currentTask.isCompleted) {
+      // Show transition helper when switching from an incomplete task
+      handleStartTransition(task)
+    } else {
+      setCurrentTask(task)
+      setViewMode(VIEW_MODES.ONE_THING)
+    }
   }
 
   // Routine completion handler
@@ -246,9 +275,65 @@ export default function App() {
     }])
   }
 
+  // Transition helper handlers
+  const handleStartTransition = (toTask) => {
+    setTransitionFromTask(currentTask)
+    setTransitionToTask(toTask)
+    setShowTransition(true)
+  }
+
+  const handleTransitionComplete = (result) => {
+    if (result.inputs.firstStep) {
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: `Great transition! Your first step: "${result.inputs.firstStep}". You've got this!`,
+        thinking: null,
+      }])
+    }
+    setShowTransition(false)
+    setTransitionFromTask(null)
+    setTransitionToTask(null)
+  }
+
+  const handleTransitionCapture = (capture) => {
+    setCaptures(prev => [capture, ...prev])
+  }
+
+  const handleTransitionBreadcrumb = (data) => {
+    const newBreadcrumb = {
+      id: Date.now().toString(),
+      activity: data.activity,
+      context: data.context,
+      createdAt: new Date(),
+    }
+    setBreadcrumbs(prev => [newBreadcrumb, ...prev])
+    updateStat('breadcrumbsDropped', 1, 'increment')
+  }
+
+  // Context bundle activation
+  const handleActivateBundle = (bundle) => {
+    setActiveBundle(bundle)
+
+    // Apply bundle settings
+    const toneMessages = {
+      supportive: "I'm here to support you! Let's make progress together.",
+      direct: "Bundle activated. Let's focus.",
+      minimal: "Ready.",
+    }
+
+    setMessages(prev => [...prev, {
+      role: 'assistant',
+      content: `${bundle.name} activated! ${toneMessages[bundle.settings.neroTone] || 'Ready to focus.'}`,
+      thinking: null,
+    }])
+  }
+
   const resolveBreadcrumb = (id) => {
     setBreadcrumbs(prev => prev.filter(b => b.id !== id))
     updateStat('breadcrumbsResolved', 1, 'increment')
+
+    // Record in reward system
+    rewards.recordBreadcrumbResolved()
   }
 
   const toggleThinkingStream = () => {
@@ -310,6 +395,7 @@ export default function App() {
     { key: '7', action: () => setViewMode(VIEW_MODES.ROUTINES) },
     { key: '8', action: () => setViewMode(VIEW_MODES.TIME_TRAINING) },
     { key: '9', action: () => setViewMode(VIEW_MODES.DISTRACTIONS) },
+    { key: '0', action: () => setViewMode(VIEW_MODES.REWARDS) },
     // Action shortcuts
     { key: 'i', action: handleInterrupt },
     { key: 'e', action: () => setShowEnergyCheckIn(true) },
@@ -565,6 +651,29 @@ export default function App() {
                 />
               </motion.div>
             )}
+
+            {viewMode === VIEW_MODES.REWARDS && (
+              <motion.div
+                key="rewards"
+                {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)}
+                className="h-full"
+              >
+                <RewardSystem />
+              </motion.div>
+            )}
+
+            {viewMode === VIEW_MODES.BUNDLES && (
+              <motion.div
+                key="bundles"
+                {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)}
+                className="h-full"
+              >
+                <ContextBundles
+                  onActivate={handleActivateBundle}
+                  activeBundle={activeBundle}
+                />
+              </motion.div>
+            )}
           </AnimatePresence>
         </main>
 
@@ -601,6 +710,32 @@ export default function App() {
           onShieldChange={setIsShieldActive}
         />
 
+        {/* Transition Helper Modal */}
+        <TransitionHelper
+          isOpen={showTransition}
+          onClose={() => setShowTransition(false)}
+          fromTask={transitionFromTask}
+          toTask={transitionToTask}
+          onCapture={handleTransitionCapture}
+          onDropBreadcrumb={handleTransitionBreadcrumb}
+          onComplete={handleTransitionComplete}
+        />
+
+        {/* Reward System Overlays */}
+        <AnimatePresence>
+          {rewards.showLevelUp && (
+            <LevelUpModal
+              level={rewards.newLevel}
+              onDismiss={rewards.dismissLevelUp}
+            />
+          )}
+        </AnimatePresence>
+
+        <XpToast
+          rewards={rewards.pendingRewards}
+          onClear={rewards.clearPendingRewards}
+        />
+
         {/* Celebration Overlay */}
         <Celebration
           celebration={celebration}
@@ -616,10 +751,12 @@ export default function App() {
                 { id: VIEW_MODES.ONE_THING, icon: Target, label: 'Focus' },
                 { id: VIEW_MODES.TASK_QUEUE, icon: ListTodo, label: 'Tasks' },
                 { id: VIEW_MODES.FOCUS_TIMER, icon: Timer, label: 'Timer' },
+                { id: VIEW_MODES.BUNDLES, icon: Layers, label: 'Modes' },
                 { id: VIEW_MODES.ROUTINES, icon: CalendarCheck, label: 'Routines' },
                 { id: VIEW_MODES.BREADCRUMBS, icon: MapPin, label: 'Trail', badge: breadcrumbs.length },
                 { id: VIEW_MODES.TIME_TRAINING, icon: Clock, label: 'Time' },
-                { id: VIEW_MODES.DISTRACTIONS, icon: AlertTriangle, label: 'Distractions' },
+                { id: VIEW_MODES.DISTRACTIONS, icon: AlertTriangle, label: 'Distract' },
+                { id: VIEW_MODES.REWARDS, icon: Trophy, label: 'Rewards' },
                 { id: VIEW_MODES.INSIGHTS, icon: BarChart3, label: 'Stats' },
               ].map((tab) => (
                 <button

@@ -14,7 +14,8 @@ import {
   ListTodo,
   CalendarCheck,
   Clock,
-  AlertTriangle
+  AlertTriangle,
+  Trophy
 } from 'lucide-react'
 import { useReducedMotion, getMotionProps } from '../hooks/useReducedMotion'
 
@@ -32,6 +33,7 @@ const SHORTCUT_GROUPS = [
       { key: '7', description: 'Go to Routines', icon: CalendarCheck },
       { key: '8', description: 'Go to Time Training', icon: Clock },
       { key: '9', description: 'Go to Distractions', icon: AlertTriangle },
+      { key: '0', description: 'Go to Rewards', icon: Trophy },
     ]
   },
   {
