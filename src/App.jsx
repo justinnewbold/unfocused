@@ -24,6 +24,8 @@ import {
   Sparkles,
   Heart,
   Calendar,
+  Scissors,
+  Shield,
 } from 'lucide-react'
 
 // Import hooks
@@ -54,6 +56,9 @@ import ContextBundles from './components/ContextBundles'
 import SmartSuggestions, { recordTaskStart, recordTaskComplete } from './components/SmartSuggestions'
 import EmotionalRegulation from './components/EmotionalRegulation'
 import WeeklyReview from './components/WeeklyReview'
+import TaskBreakdown from './components/TaskBreakdown'
+import HyperfocusGuard from './components/HyperfocusGuard'
+import ExternalBrain from './components/ExternalBrain'
 
 // View modes
 const VIEW_MODES = {
@@ -71,6 +76,9 @@ const VIEW_MODES = {
   SUGGESTIONS: 'suggestions',
   EMOTIONS: 'emotions',
   WEEKLY_REVIEW: 'weekly_review',
+  BREAKDOWN: 'breakdown',
+  HYPERFOCUS: 'hyperfocus',
+  EXTERNAL_BRAIN: 'external_brain',
 }
 
 export default function App() {
@@ -107,6 +115,18 @@ export default function App() {
 
   // Reward system
   const rewards = useRewardSystem()
+
+  // Session tracking for hyperfocus guard
+  const [sessionStartTime, setSessionStartTime] = useState(null)
+
+  // Track session start when timer starts
+  useEffect(() => {
+    if (isTimerRunning && !sessionStartTime) {
+      setSessionStartTime(Date.now())
+    } else if (!isTimerRunning) {
+      setSessionStartTime(null)
+    }
+  }, [isTimerRunning, sessionStartTime])
 
   // Initialize stats on mount
   useEffect(() => {
@@ -373,6 +393,27 @@ export default function App() {
     setViewMode(VIEW_MODES.CONVERSATION)
   }
 
+  // Task breakdown - create micro task
+  const handleCreateMicroTask = (task) => {
+    setCurrentTask(task)
+    setViewMode(VIEW_MODES.ONE_THING)
+    setMessages(prev => [...prev, {
+      role: 'assistant',
+      content: `Starting micro-step: "${task.title}". Just this one tiny action - you've got this!`,
+      thinking: null,
+    }])
+  }
+
+  // Hyperfocus guard break request
+  const handleHyperfocusBreak = () => {
+    setIsTimerRunning(false)
+    setMessages(prev => [...prev, {
+      role: 'assistant',
+      content: "Good call taking a break! Your brain needs rest to stay sharp. Stretch, hydrate, and come back refreshed.",
+      thinking: null,
+    }])
+  }
+
   const resolveBreadcrumb = (id) => {
     setBreadcrumbs(prev => prev.filter(b => b.id !== id))
     updateStat('breadcrumbsResolved', 1, 'increment')
@@ -448,6 +489,9 @@ export default function App() {
     { key: 's', action: () => setViewMode(VIEW_MODES.SUGGESTIONS) },
     { key: 'f', action: () => setViewMode(VIEW_MODES.EMOTIONS) },
     { key: 'w', action: () => setViewMode(VIEW_MODES.WEEKLY_REVIEW) },
+    { key: 'b', action: () => setViewMode(VIEW_MODES.BREAKDOWN) },
+    { key: 'h', action: () => setViewMode(VIEW_MODES.HYPERFOCUS) },
+    { key: 'n', action: () => setViewMode(VIEW_MODES.EXTERNAL_BRAIN) },
     // Space for context-sensitive action
     {
       key: ' ',
@@ -755,6 +799,43 @@ export default function App() {
                 <WeeklyReview onComplete={handleWeeklyReviewComplete} />
               </motion.div>
             )}
+
+            {viewMode === VIEW_MODES.BREAKDOWN && (
+              <motion.div
+                key="breakdown"
+                {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)}
+                className="h-full"
+              >
+                <TaskBreakdown
+                  currentTask={currentTask}
+                  onCreateMicroTask={handleCreateMicroTask}
+                />
+              </motion.div>
+            )}
+
+            {viewMode === VIEW_MODES.HYPERFOCUS && (
+              <motion.div
+                key="hyperfocus"
+                {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)}
+                className="h-full"
+              >
+                <HyperfocusGuard
+                  isTimerRunning={isTimerRunning}
+                  sessionStartTime={sessionStartTime}
+                  onRequestBreak={handleHyperfocusBreak}
+                />
+              </motion.div>
+            )}
+
+            {viewMode === VIEW_MODES.EXTERNAL_BRAIN && (
+              <motion.div
+                key="external-brain"
+                {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)}
+                className="h-full"
+              >
+                <ExternalBrain />
+              </motion.div>
+            )}
           </AnimatePresence>
         </main>
 
@@ -831,11 +912,14 @@ export default function App() {
                 { id: VIEW_MODES.CONVERSATION, icon: MessageCircle, label: 'Chat' },
                 { id: VIEW_MODES.ONE_THING, icon: Target, label: 'Focus' },
                 { id: VIEW_MODES.SUGGESTIONS, icon: Sparkles, label: 'Suggest' },
+                { id: VIEW_MODES.BREAKDOWN, icon: Scissors, label: 'Breakdown' },
                 { id: VIEW_MODES.TASK_QUEUE, icon: ListTodo, label: 'Tasks' },
                 { id: VIEW_MODES.FOCUS_TIMER, icon: Timer, label: 'Timer' },
+                { id: VIEW_MODES.HYPERFOCUS, icon: Shield, label: 'Guard' },
                 { id: VIEW_MODES.BUNDLES, icon: Layers, label: 'Modes' },
                 { id: VIEW_MODES.ROUTINES, icon: CalendarCheck, label: 'Routines' },
                 { id: VIEW_MODES.BREADCRUMBS, icon: MapPin, label: 'Trail', badge: breadcrumbs.length },
+                { id: VIEW_MODES.EXTERNAL_BRAIN, icon: Brain, label: 'Brain' },
                 { id: VIEW_MODES.EMOTIONS, icon: Heart, label: 'Feelings' },
                 { id: VIEW_MODES.WEEKLY_REVIEW, icon: Calendar, label: 'Review' },
                 { id: VIEW_MODES.REWARDS, icon: Trophy, label: 'Rewards' },

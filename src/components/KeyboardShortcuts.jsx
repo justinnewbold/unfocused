@@ -19,6 +19,8 @@ import {
   Sparkles,
   Heart,
   Calendar,
+  Scissors,
+  Shield,
 } from 'lucide-react'
 import { useReducedMotion, getMotionProps } from '../hooks/useReducedMotion'
 
@@ -49,6 +51,9 @@ const SHORTCUT_GROUPS = [
       { key: 'S', description: 'Smart suggestions', icon: Sparkles },
       { key: 'F', description: 'Feelings / Emotions', icon: Heart },
       { key: 'W', description: 'Weekly review', icon: Calendar },
+      { key: 'B', description: 'Task breakdown', icon: Scissors },
+      { key: 'H', description: 'Hyperfocus guard', icon: Shield },
+      { key: 'N', description: 'External brain / Notes', icon: Brain },
     ]
   },
   {
