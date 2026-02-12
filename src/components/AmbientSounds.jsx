@@ -23,6 +23,13 @@ const SOUND_TYPES = [
     color: 'amber'
   },
   {
+    id: 'pink',
+    label: 'Pink Noise',
+    description: 'Balanced, natural masking',
+    icon: Radio,
+    color: 'pink'
+  },
+  {
     id: 'white',
     label: 'White Noise',
     description: 'Classic static for masking',
@@ -44,6 +51,9 @@ const SOUND_TYPES = [
     color: 'cyan'
   },
 ]
+
+// Crossfade duration in seconds
+const CROSSFADE_DURATION = 1.5
 
 // Generate brown noise using Web Audio API
 const createBrownNoise = (audioContext) => {
@@ -106,6 +116,31 @@ const createRainSound = (audioContext) => {
   return source
 }
 
+// Generate pink noise (1/f noise - between white and brown)
+const createPinkNoise = (audioContext) => {
+  const bufferSize = 2 * audioContext.sampleRate
+  const buffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate)
+  const output = buffer.getChannelData(0)
+
+  let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0
+  for (let i = 0; i < bufferSize; i++) {
+    const white = Math.random() * 2 - 1
+    b0 = 0.99886 * b0 + white * 0.0555179
+    b1 = 0.99332 * b1 + white * 0.0750759
+    b2 = 0.96900 * b2 + white * 0.1538520
+    b3 = 0.86650 * b3 + white * 0.3104856
+    b4 = 0.55000 * b4 + white * 0.5329522
+    b5 = -0.7616 * b5 - white * 0.0168980
+    output[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.11
+    b6 = white * 0.115926
+  }
+
+  const source = audioContext.createBufferSource()
+  source.buffer = buffer
+  source.loop = true
+  return source
+}
+
 // Generate ocean wave sound (modulated noise)
 const createOceanSound = (audioContext) => {
   const bufferSize = 4 * audioContext.sampleRate
@@ -157,6 +192,8 @@ export default function AmbientSounds({ isTimerRunning }) {
     switch (type) {
       case 'brown':
         return createBrownNoise(ctx)
+      case 'pink':
+        return createPinkNoise(ctx)
       case 'white':
         return createWhiteNoise(ctx)
       case 'rain':
@@ -168,7 +205,7 @@ export default function AmbientSounds({ isTimerRunning }) {
     }
   }, [])
 
-  // Play sound
+  // Play sound with crossfade transition
   const playSound = useCallback((soundType) => {
     const ctx = initAudio()
 
@@ -177,10 +214,15 @@ export default function AmbientSounds({ isTimerRunning }) {
       ctx.resume()
     }
 
-    // Stop current sound
-    if (sourceRef.current) {
-      sourceRef.current.stop()
-      sourceRef.current.disconnect()
+    // Crossfade: fade out current sound before stopping
+    if (sourceRef.current && gainRef.current) {
+      const oldSource = sourceRef.current
+      const oldGain = gainRef.current
+      oldGain.gain.setValueAtTime(oldGain.gain.value, ctx.currentTime)
+      oldGain.gain.linearRampToValueAtTime(0, ctx.currentTime + CROSSFADE_DURATION)
+      setTimeout(() => {
+        try { oldSource.stop(); oldSource.disconnect() } catch {}
+      }, CROSSFADE_DURATION * 1000)
     }
 
     // Create new nodes
@@ -190,15 +232,19 @@ export default function AmbientSounds({ isTimerRunning }) {
 
     // Configure filter for smoother sound
     filter.type = 'lowpass'
-    filter.frequency.value = soundType === 'white' ? 8000 : soundType === 'rain' ? 4000 : 2000
+    filter.frequency.value = soundType === 'white' ? 8000
+      : soundType === 'pink' ? 6000
+      : soundType === 'rain' ? 4000
+      : 2000
 
     // Connect nodes
     source.connect(filter)
     filter.connect(gain)
     gain.connect(ctx.destination)
 
-    // Set volume
-    gain.gain.value = volume
+    // Fade in the new sound
+    gain.gain.setValueAtTime(0, ctx.currentTime)
+    gain.gain.linearRampToValueAtTime(volume, ctx.currentTime + CROSSFADE_DURATION)
 
     // Start playing
     source.start()
@@ -212,11 +258,17 @@ export default function AmbientSounds({ isTimerRunning }) {
     setIsPlaying(true)
   }, [initAudio, createSound, volume])
 
-  // Stop sound
+  // Stop sound with fade out
   const stopSound = useCallback(() => {
-    if (sourceRef.current) {
-      sourceRef.current.stop()
-      sourceRef.current.disconnect()
+    if (sourceRef.current && gainRef.current && audioContextRef.current) {
+      const ctx = audioContextRef.current
+      const oldSource = sourceRef.current
+      const oldGain = gainRef.current
+      oldGain.gain.setValueAtTime(oldGain.gain.value, ctx.currentTime)
+      oldGain.gain.linearRampToValueAtTime(0, ctx.currentTime + CROSSFADE_DURATION * 0.5)
+      setTimeout(() => {
+        try { oldSource.stop(); oldSource.disconnect() } catch {}
+      }, CROSSFADE_DURATION * 500)
       sourceRef.current = null
     }
     setIsPlaying(false)
