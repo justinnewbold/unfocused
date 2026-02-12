@@ -27,6 +27,7 @@ import {
   Scissors,
   Shield,
   Download,
+  MoreHorizontal,
 } from 'lucide-react'
 
 // Import hooks
@@ -46,6 +47,7 @@ import RewardSystem, { useRewardSystem, LevelUpModal, XpToast } from './componen
 import { updateStat, initTodayStats } from './components/InsightsDashboard'
 import { recordTaskStart } from './components/SmartSuggestions'
 import DataExport from './components/DataExport'
+import MoreMenu from './components/MoreMenu'
 
 // Lazy-loaded view components (loaded on demand per view)
 const BreadcrumbTrail = lazy(() => import('./components/BreadcrumbTrail'))
@@ -63,6 +65,51 @@ const WeeklyReview = lazy(() => import('./components/WeeklyReview'))
 const TaskBreakdown = lazy(() => import('./components/TaskBreakdown'))
 const HyperfocusGuard = lazy(() => import('./components/HyperfocusGuard'))
 const ExternalBrain = lazy(() => import('./components/ExternalBrain'))
+
+// Lazy-loaded extended feature components (accessible from More menu)
+const MedicationReminder = lazy(() => import('./components/MedicationReminder'))
+const SleepTracker = lazy(() => import('./components/SleepTracker'))
+const MovementBreaks = lazy(() => import('./components/MovementBreaks'))
+const MoodTracker = lazy(() => import('./components/MoodTracker'))
+const DopamineMenu = lazy(() => import('./components/DopamineMenu'))
+const WinsJournal = lazy(() => import('./components/WinsJournal'))
+const RejectionJournal = lazy(() => import('./components/RejectionJournal'))
+const SelfCompassion = lazy(() => import('./components/SelfCompassion'))
+const ObjectFinder = lazy(() => import('./components/ObjectFinder'))
+const WaitingMode = lazy(() => import('./components/WaitingMode'))
+const DecisionHelper = lazy(() => import('./components/DecisionHelper'))
+const WorkingMemoryAid = lazy(() => import('./components/WorkingMemoryAid'))
+const DeadlineCountdown = lazy(() => import('./components/DeadlineCountdown'))
+const ProjectView = lazy(() => import('./components/ProjectView'))
+const TaskPrioritizer = lazy(() => import('./components/TaskPrioritizer'))
+const TemplateLibrary = lazy(() => import('./components/TemplateLibrary'))
+const AppointmentBuffer = lazy(() => import('./components/AppointmentBuffer'))
+const FocusRooms = lazy(() => import('./components/FocusRooms'))
+const DistractionBlocking = lazy(() => import('./components/DistractionBlocking'))
+const LocationContext = lazy(() => import('./components/LocationContext'))
+const CustomSounds = lazy(() => import('./components/CustomSounds'))
+const MusicIntegration = lazy(() => import('./components/MusicIntegration'))
+const AccountabilityPartner = lazy(() => import('./components/AccountabilityPartner'))
+const CommunityFeed = lazy(() => import('./components/CommunityFeed'))
+const FamilyMode = lazy(() => import('./components/FamilyMode'))
+const TherapistPortal = lazy(() => import('./components/TherapistPortal'))
+const CorrelationInsights = lazy(() => import('./components/CorrelationInsights'))
+const ProgressVisualization = lazy(() => import('./components/ProgressVisualization'))
+const ExportReports = lazy(() => import('./components/ExportReports'))
+const PredictiveSuggestions = lazy(() => import('./components/PredictiveSuggestions'))
+const VoiceAssistant = lazy(() => import('./components/VoiceAssistant'))
+const VoiceNotes = lazy(() => import('./components/VoiceNotes'))
+const CalendarIntegration = lazy(() => import('./components/CalendarIntegration'))
+const NoteAppSync = lazy(() => import('./components/NoteAppSync'))
+const AchievementBadges = lazy(() => import('./components/AchievementBadges'))
+const AvatarPetSystem = lazy(() => import('./components/AvatarPetSystem'))
+const ChallengesMode = lazy(() => import('./components/ChallengesMode'))
+const AccessibilitySettings = lazy(() => import('./components/AccessibilitySettings'))
+const DarkModeSettings = lazy(() => import('./components/DarkModeSettings'))
+const NeroPersonality = lazy(() => import('./components/NeroPersonality'))
+const ShortcutActions = lazy(() => import('./components/ShortcutActions'))
+const WearableSync = lazy(() => import('./components/WearableSync'))
+const WidgetSupport = lazy(() => import('./components/WidgetSupport'))
 
 // Lazy-loaded overlay components
 const AmbientSounds = lazy(() => import('./components/AmbientSounds'))
@@ -82,8 +129,9 @@ function ViewLoadingFallback() {
   )
 }
 
-// View modes
+// View modes - core views + all extended features
 const VIEW_MODES = {
+  // Core views (in bottom nav)
   CONVERSATION: 'conversation',
   ONE_THING: 'one_thing',
   BREADCRUMBS: 'breadcrumbs',
@@ -101,6 +149,50 @@ const VIEW_MODES = {
   BREAKDOWN: 'breakdown',
   HYPERFOCUS: 'hyperfocus',
   EXTERNAL_BRAIN: 'external_brain',
+  // Extended features (accessible from More menu)
+  MEDICATION: 'medication',
+  SLEEP: 'sleep',
+  MOVEMENT: 'movement',
+  MOOD_TRACKER: 'mood_tracker',
+  DOPAMINE: 'dopamine',
+  WINS: 'wins',
+  REJECTION: 'rejection',
+  SELF_COMPASSION: 'self_compassion',
+  OBJECT_FINDER: 'object_finder',
+  WAITING: 'waiting',
+  DECISION: 'decision',
+  WORKING_MEMORY: 'working_memory',
+  DEADLINE: 'deadline',
+  PROJECT: 'project',
+  PRIORITIZER: 'prioritizer',
+  TEMPLATES: 'templates',
+  APPOINTMENT: 'appointment',
+  FOCUS_ROOMS: 'focus_rooms',
+  DISTRACTION_BLOCK: 'distraction_block',
+  LOCATION: 'location',
+  CUSTOM_SOUNDS: 'custom_sounds',
+  MUSIC: 'music',
+  ACCOUNTABILITY: 'accountability',
+  COMMUNITY: 'community',
+  FAMILY: 'family',
+  THERAPIST: 'therapist',
+  CORRELATIONS: 'correlations',
+  PROGRESS: 'progress',
+  EXPORT_REPORTS: 'export_reports',
+  PREDICTIONS: 'predictions',
+  VOICE_ASSISTANT: 'voice_assistant',
+  VOICE_NOTES: 'voice_notes',
+  CALENDAR_SYNC: 'calendar_sync',
+  NOTE_SYNC: 'note_sync',
+  BADGES: 'badges',
+  PET: 'pet',
+  CHALLENGES: 'challenges',
+  ACCESSIBILITY: 'accessibility',
+  DARK_MODE: 'dark_mode',
+  NERO_PERSONALITY: 'nero_personality',
+  SHORTCUT_ACTIONS: 'shortcut_actions',
+  WEARABLE: 'wearable',
+  WIDGETS: 'widgets',
 }
 
 export default function App() {
@@ -493,6 +585,9 @@ export default function App() {
 
   // State for data export modal
   const [showDataExport, setShowDataExport] = useState(false)
+
+  // State for More menu
+  const [showMoreMenu, setShowMoreMenu] = useState(false)
 
   // Keyboard shortcuts configuration
   const shortcuts = useMemo(() => [
@@ -934,6 +1029,352 @@ export default function App() {
                 </ViewErrorBoundary>
               </motion.div>
             )}
+
+            {/* === Extended Features (from More menu) === */}
+
+            {viewMode === VIEW_MODES.MEDICATION && (
+              <motion.div key="medication" {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)} className="h-full">
+                <ViewErrorBoundary viewName="Medication"><Suspense fallback={<ViewLoadingFallback />}>
+                  <MedicationReminder energyLevel={energyLevel} />
+                </Suspense></ViewErrorBoundary>
+              </motion.div>
+            )}
+
+            {viewMode === VIEW_MODES.SLEEP && (
+              <motion.div key="sleep" {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)} className="h-full">
+                <ViewErrorBoundary viewName="Sleep"><Suspense fallback={<ViewLoadingFallback />}>
+                  <SleepTracker energyLevel={energyLevel} />
+                </Suspense></ViewErrorBoundary>
+              </motion.div>
+            )}
+
+            {viewMode === VIEW_MODES.MOVEMENT && (
+              <motion.div key="movement" {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)} className="h-full">
+                <ViewErrorBoundary viewName="Movement"><Suspense fallback={<ViewLoadingFallback />}>
+                  <MovementBreaks isTimerRunning={isTimerRunning} />
+                </Suspense></ViewErrorBoundary>
+              </motion.div>
+            )}
+
+            {viewMode === VIEW_MODES.MOOD_TRACKER && (
+              <motion.div key="mood-tracker" {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)} className="h-full">
+                <ViewErrorBoundary viewName="Mood"><Suspense fallback={<ViewLoadingFallback />}>
+                  <MoodTracker />
+                </Suspense></ViewErrorBoundary>
+              </motion.div>
+            )}
+
+            {viewMode === VIEW_MODES.DOPAMINE && (
+              <motion.div key="dopamine" {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)} className="h-full">
+                <ViewErrorBoundary viewName="Dopamine"><Suspense fallback={<ViewLoadingFallback />}>
+                  <DopamineMenu />
+                </Suspense></ViewErrorBoundary>
+              </motion.div>
+            )}
+
+            {viewMode === VIEW_MODES.WINS && (
+              <motion.div key="wins" {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)} className="h-full">
+                <ViewErrorBoundary viewName="Wins"><Suspense fallback={<ViewLoadingFallback />}>
+                  <WinsJournal />
+                </Suspense></ViewErrorBoundary>
+              </motion.div>
+            )}
+
+            {viewMode === VIEW_MODES.REJECTION && (
+              <motion.div key="rejection" {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)} className="h-full">
+                <ViewErrorBoundary viewName="RSD Journal"><Suspense fallback={<ViewLoadingFallback />}>
+                  <RejectionJournal />
+                </Suspense></ViewErrorBoundary>
+              </motion.div>
+            )}
+
+            {viewMode === VIEW_MODES.SELF_COMPASSION && (
+              <motion.div key="self-compassion" {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)} className="h-full">
+                <ViewErrorBoundary viewName="Self-Compassion"><Suspense fallback={<ViewLoadingFallback />}>
+                  <SelfCompassion />
+                </Suspense></ViewErrorBoundary>
+              </motion.div>
+            )}
+
+            {viewMode === VIEW_MODES.OBJECT_FINDER && (
+              <motion.div key="object-finder" {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)} className="h-full">
+                <ViewErrorBoundary viewName="Object Finder"><Suspense fallback={<ViewLoadingFallback />}>
+                  <ObjectFinder />
+                </Suspense></ViewErrorBoundary>
+              </motion.div>
+            )}
+
+            {viewMode === VIEW_MODES.WAITING && (
+              <motion.div key="waiting" {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)} className="h-full">
+                <ViewErrorBoundary viewName="Waiting"><Suspense fallback={<ViewLoadingFallback />}>
+                  <WaitingMode />
+                </Suspense></ViewErrorBoundary>
+              </motion.div>
+            )}
+
+            {viewMode === VIEW_MODES.DECISION && (
+              <motion.div key="decision" {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)} className="h-full">
+                <ViewErrorBoundary viewName="Decision Helper"><Suspense fallback={<ViewLoadingFallback />}>
+                  <DecisionHelper energyLevel={energyLevel} />
+                </Suspense></ViewErrorBoundary>
+              </motion.div>
+            )}
+
+            {viewMode === VIEW_MODES.WORKING_MEMORY && (
+              <motion.div key="working-memory" {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)} className="h-full">
+                <ViewErrorBoundary viewName="Working Memory"><Suspense fallback={<ViewLoadingFallback />}>
+                  <WorkingMemoryAid currentTask={currentTask} currentView={viewMode} />
+                </Suspense></ViewErrorBoundary>
+              </motion.div>
+            )}
+
+            {viewMode === VIEW_MODES.DEADLINE && (
+              <motion.div key="deadline" {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)} className="h-full">
+                <ViewErrorBoundary viewName="Deadlines"><Suspense fallback={<ViewLoadingFallback />}>
+                  <DeadlineCountdown />
+                </Suspense></ViewErrorBoundary>
+              </motion.div>
+            )}
+
+            {viewMode === VIEW_MODES.PROJECT && (
+              <motion.div key="project" {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)} className="h-full">
+                <ViewErrorBoundary viewName="Projects"><Suspense fallback={<ViewLoadingFallback />}>
+                  <ProjectView />
+                </Suspense></ViewErrorBoundary>
+              </motion.div>
+            )}
+
+            {viewMode === VIEW_MODES.PRIORITIZER && (
+              <motion.div key="prioritizer" {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)} className="h-full">
+                <ViewErrorBoundary viewName="Prioritizer"><Suspense fallback={<ViewLoadingFallback />}>
+                  <TaskPrioritizer energyLevel={energyLevel} />
+                </Suspense></ViewErrorBoundary>
+              </motion.div>
+            )}
+
+            {viewMode === VIEW_MODES.TEMPLATES && (
+              <motion.div key="templates" {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)} className="h-full">
+                <ViewErrorBoundary viewName="Templates"><Suspense fallback={<ViewLoadingFallback />}>
+                  <TemplateLibrary />
+                </Suspense></ViewErrorBoundary>
+              </motion.div>
+            )}
+
+            {viewMode === VIEW_MODES.APPOINTMENT && (
+              <motion.div key="appointment" {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)} className="h-full">
+                <ViewErrorBoundary viewName="Buffers"><Suspense fallback={<ViewLoadingFallback />}>
+                  <AppointmentBuffer />
+                </Suspense></ViewErrorBoundary>
+              </motion.div>
+            )}
+
+            {viewMode === VIEW_MODES.FOCUS_ROOMS && (
+              <motion.div key="focus-rooms" {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)} className="h-full">
+                <ViewErrorBoundary viewName="Focus Rooms"><Suspense fallback={<ViewLoadingFallback />}>
+                  <FocusRooms />
+                </Suspense></ViewErrorBoundary>
+              </motion.div>
+            )}
+
+            {viewMode === VIEW_MODES.DISTRACTION_BLOCK && (
+              <motion.div key="distraction-block" {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)} className="h-full">
+                <ViewErrorBoundary viewName="Block"><Suspense fallback={<ViewLoadingFallback />}>
+                  <DistractionBlocking />
+                </Suspense></ViewErrorBoundary>
+              </motion.div>
+            )}
+
+            {viewMode === VIEW_MODES.LOCATION && (
+              <motion.div key="location" {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)} className="h-full">
+                <ViewErrorBoundary viewName="Location"><Suspense fallback={<ViewLoadingFallback />}>
+                  <LocationContext />
+                </Suspense></ViewErrorBoundary>
+              </motion.div>
+            )}
+
+            {viewMode === VIEW_MODES.CUSTOM_SOUNDS && (
+              <motion.div key="custom-sounds" {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)} className="h-full">
+                <ViewErrorBoundary viewName="Sounds"><Suspense fallback={<ViewLoadingFallback />}>
+                  <CustomSounds />
+                </Suspense></ViewErrorBoundary>
+              </motion.div>
+            )}
+
+            {viewMode === VIEW_MODES.MUSIC && (
+              <motion.div key="music" {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)} className="h-full">
+                <ViewErrorBoundary viewName="Music"><Suspense fallback={<ViewLoadingFallback />}>
+                  <MusicIntegration />
+                </Suspense></ViewErrorBoundary>
+              </motion.div>
+            )}
+
+            {viewMode === VIEW_MODES.ACCOUNTABILITY && (
+              <motion.div key="accountability" {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)} className="h-full">
+                <ViewErrorBoundary viewName="Accountability"><Suspense fallback={<ViewLoadingFallback />}>
+                  <AccountabilityPartner />
+                </Suspense></ViewErrorBoundary>
+              </motion.div>
+            )}
+
+            {viewMode === VIEW_MODES.COMMUNITY && (
+              <motion.div key="community" {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)} className="h-full">
+                <ViewErrorBoundary viewName="Community"><Suspense fallback={<ViewLoadingFallback />}>
+                  <CommunityFeed />
+                </Suspense></ViewErrorBoundary>
+              </motion.div>
+            )}
+
+            {viewMode === VIEW_MODES.FAMILY && (
+              <motion.div key="family" {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)} className="h-full">
+                <ViewErrorBoundary viewName="Family"><Suspense fallback={<ViewLoadingFallback />}>
+                  <FamilyMode />
+                </Suspense></ViewErrorBoundary>
+              </motion.div>
+            )}
+
+            {viewMode === VIEW_MODES.THERAPIST && (
+              <motion.div key="therapist" {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)} className="h-full">
+                <ViewErrorBoundary viewName="Therapist"><Suspense fallback={<ViewLoadingFallback />}>
+                  <TherapistPortal />
+                </Suspense></ViewErrorBoundary>
+              </motion.div>
+            )}
+
+            {viewMode === VIEW_MODES.CORRELATIONS && (
+              <motion.div key="correlations" {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)} className="h-full">
+                <ViewErrorBoundary viewName="Patterns"><Suspense fallback={<ViewLoadingFallback />}>
+                  <CorrelationInsights />
+                </Suspense></ViewErrorBoundary>
+              </motion.div>
+            )}
+
+            {viewMode === VIEW_MODES.PROGRESS && (
+              <motion.div key="progress" {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)} className="h-full">
+                <ViewErrorBoundary viewName="Progress"><Suspense fallback={<ViewLoadingFallback />}>
+                  <ProgressVisualization />
+                </Suspense></ViewErrorBoundary>
+              </motion.div>
+            )}
+
+            {viewMode === VIEW_MODES.EXPORT_REPORTS && (
+              <motion.div key="export-reports" {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)} className="h-full">
+                <ViewErrorBoundary viewName="Reports"><Suspense fallback={<ViewLoadingFallback />}>
+                  <ExportReports />
+                </Suspense></ViewErrorBoundary>
+              </motion.div>
+            )}
+
+            {viewMode === VIEW_MODES.PREDICTIONS && (
+              <motion.div key="predictions" {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)} className="h-full">
+                <ViewErrorBoundary viewName="Predictions"><Suspense fallback={<ViewLoadingFallback />}>
+                  <PredictiveSuggestions />
+                </Suspense></ViewErrorBoundary>
+              </motion.div>
+            )}
+
+            {viewMode === VIEW_MODES.VOICE_ASSISTANT && (
+              <motion.div key="voice-assistant" {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)} className="h-full">
+                <ViewErrorBoundary viewName="Voice"><Suspense fallback={<ViewLoadingFallback />}>
+                  <VoiceAssistant />
+                </Suspense></ViewErrorBoundary>
+              </motion.div>
+            )}
+
+            {viewMode === VIEW_MODES.VOICE_NOTES && (
+              <motion.div key="voice-notes" {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)} className="h-full">
+                <ViewErrorBoundary viewName="Voice Notes"><Suspense fallback={<ViewLoadingFallback />}>
+                  <VoiceNotes />
+                </Suspense></ViewErrorBoundary>
+              </motion.div>
+            )}
+
+            {viewMode === VIEW_MODES.CALENDAR_SYNC && (
+              <motion.div key="calendar-sync" {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)} className="h-full">
+                <ViewErrorBoundary viewName="Calendar"><Suspense fallback={<ViewLoadingFallback />}>
+                  <CalendarIntegration />
+                </Suspense></ViewErrorBoundary>
+              </motion.div>
+            )}
+
+            {viewMode === VIEW_MODES.NOTE_SYNC && (
+              <motion.div key="note-sync" {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)} className="h-full">
+                <ViewErrorBoundary viewName="Note Sync"><Suspense fallback={<ViewLoadingFallback />}>
+                  <NoteAppSync />
+                </Suspense></ViewErrorBoundary>
+              </motion.div>
+            )}
+
+            {viewMode === VIEW_MODES.BADGES && (
+              <motion.div key="badges" {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)} className="h-full">
+                <ViewErrorBoundary viewName="Badges"><Suspense fallback={<ViewLoadingFallback />}>
+                  <AchievementBadges />
+                </Suspense></ViewErrorBoundary>
+              </motion.div>
+            )}
+
+            {viewMode === VIEW_MODES.PET && (
+              <motion.div key="pet" {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)} className="h-full">
+                <ViewErrorBoundary viewName="Pet"><Suspense fallback={<ViewLoadingFallback />}>
+                  <AvatarPetSystem />
+                </Suspense></ViewErrorBoundary>
+              </motion.div>
+            )}
+
+            {viewMode === VIEW_MODES.CHALLENGES && (
+              <motion.div key="challenges" {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)} className="h-full">
+                <ViewErrorBoundary viewName="Challenges"><Suspense fallback={<ViewLoadingFallback />}>
+                  <ChallengesMode />
+                </Suspense></ViewErrorBoundary>
+              </motion.div>
+            )}
+
+            {viewMode === VIEW_MODES.ACCESSIBILITY && (
+              <motion.div key="accessibility" {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)} className="h-full">
+                <ViewErrorBoundary viewName="Accessibility"><Suspense fallback={<ViewLoadingFallback />}>
+                  <AccessibilitySettings />
+                </Suspense></ViewErrorBoundary>
+              </motion.div>
+            )}
+
+            {viewMode === VIEW_MODES.DARK_MODE && (
+              <motion.div key="dark-mode" {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)} className="h-full">
+                <ViewErrorBoundary viewName="Theme"><Suspense fallback={<ViewLoadingFallback />}>
+                  <DarkModeSettings />
+                </Suspense></ViewErrorBoundary>
+              </motion.div>
+            )}
+
+            {viewMode === VIEW_MODES.NERO_PERSONALITY && (
+              <motion.div key="nero-personality" {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)} className="h-full">
+                <ViewErrorBoundary viewName="Personality"><Suspense fallback={<ViewLoadingFallback />}>
+                  <NeroPersonality />
+                </Suspense></ViewErrorBoundary>
+              </motion.div>
+            )}
+
+            {viewMode === VIEW_MODES.SHORTCUT_ACTIONS && (
+              <motion.div key="shortcut-actions" {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)} className="h-full">
+                <ViewErrorBoundary viewName="Shortcuts"><Suspense fallback={<ViewLoadingFallback />}>
+                  <ShortcutActions />
+                </Suspense></ViewErrorBoundary>
+              </motion.div>
+            )}
+
+            {viewMode === VIEW_MODES.WEARABLE && (
+              <motion.div key="wearable" {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)} className="h-full">
+                <ViewErrorBoundary viewName="Wearable"><Suspense fallback={<ViewLoadingFallback />}>
+                  <WearableSync />
+                </Suspense></ViewErrorBoundary>
+              </motion.div>
+            )}
+
+            {viewMode === VIEW_MODES.WIDGETS && (
+              <motion.div key="widgets" {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)} className="h-full">
+                <ViewErrorBoundary viewName="Widgets"><Suspense fallback={<ViewLoadingFallback />}>
+                  <WidgetSupport />
+                </Suspense></ViewErrorBoundary>
+              </motion.div>
+            )}
           </AnimatePresence>
         </main>
 
@@ -953,6 +1394,14 @@ export default function App() {
         <DataExport
           isOpen={showDataExport}
           onClose={() => setShowDataExport(false)}
+        />
+
+        {/* More Menu - all features grid */}
+        <MoreMenu
+          isOpen={showMoreMenu}
+          onClose={() => setShowMoreMenu(false)}
+          onNavigate={(featureId) => setViewMode(featureId)}
+          currentView={viewMode}
         />
 
         {/* Lazy-loaded overlay components */}
@@ -1031,14 +1480,17 @@ export default function App() {
                 { id: VIEW_MODES.WEEKLY_REVIEW, icon: Calendar, label: 'Review' },
                 { id: VIEW_MODES.REWARDS, icon: Trophy, label: 'Rewards' },
                 { id: VIEW_MODES.INSIGHTS, icon: BarChart3, label: 'Stats' },
+                { id: '__more__', icon: MoreHorizontal, label: 'More' },
               ].map((tab) => (
                 <button
                   key={tab.id}
-                  onClick={() => setViewMode(tab.id)}
+                  onClick={() => tab.id === '__more__' ? setShowMoreMenu(true) : setViewMode(tab.id)}
                   className={`relative flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-all min-h-[52px] min-w-[60px] ${
-                    viewMode === tab.id
-                      ? 'bg-nero-500/20 text-nero-400'
-                      : 'text-white/50 hover:text-white/80 hover:bg-white/5'
+                    tab.id === '__more__'
+                      ? 'text-white/50 hover:text-white/80 hover:bg-white/5'
+                      : viewMode === tab.id
+                        ? 'bg-nero-500/20 text-nero-400'
+                        : 'text-white/50 hover:text-white/80 hover:bg-white/5'
                   }`}
                 >
                   <div className="relative">
