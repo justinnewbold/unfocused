@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react'
+import React, { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   MessageCircle,
@@ -26,39 +26,61 @@ import {
   Calendar,
   Scissors,
   Shield,
+  Download,
 } from 'lucide-react'
 
 // Import hooks
 import { useReducedMotion, getMotionProps } from './hooks/useReducedMotion'
 import { useKeyboardShortcuts, useShortcutsHelp } from './hooks/useKeyboardShortcuts'
 
-// Import components
+// Import error boundary for view-level error catching
+import { ViewErrorBoundary } from './components/ErrorBoundary'
+
+// Eagerly loaded components (always visible / needed immediately)
 import EnergyCheckIn from './components/EnergyCheckIn'
-import BreadcrumbTrail from './components/BreadcrumbTrail'
-import OneThingMode from './components/OneThingMode'
-import ThinkingStream from './components/ThinkingStream'
 import ConversationView from './components/ConversationView'
-import FocusTimer from './components/FocusTimer'
-import InsightsDashboard, { updateStat, initTodayStats } from './components/InsightsDashboard'
 import KeyboardShortcuts from './components/KeyboardShortcuts'
 import QuickCapture from './components/QuickCapture'
-import AmbientSounds from './components/AmbientSounds'
 import Celebration, { useCelebration } from './components/Celebration'
-import TaskQueue from './components/TaskQueue'
-import DailyRoutines from './components/DailyRoutines'
-import BodyDoubling from './components/BodyDoubling'
-import DistractionLog from './components/DistractionLog'
-import TimeEstimation from './components/TimeEstimation'
-import FocusShield from './components/FocusShield'
-import TransitionHelper from './components/TransitionHelper'
 import RewardSystem, { useRewardSystem, LevelUpModal, XpToast } from './components/RewardSystem'
-import ContextBundles from './components/ContextBundles'
-import SmartSuggestions, { recordTaskStart, recordTaskComplete } from './components/SmartSuggestions'
-import EmotionalRegulation from './components/EmotionalRegulation'
-import WeeklyReview from './components/WeeklyReview'
-import TaskBreakdown from './components/TaskBreakdown'
-import HyperfocusGuard from './components/HyperfocusGuard'
-import ExternalBrain from './components/ExternalBrain'
+import { updateStat, initTodayStats } from './components/InsightsDashboard'
+import { recordTaskStart } from './components/SmartSuggestions'
+import DataExport from './components/DataExport'
+
+// Lazy-loaded view components (loaded on demand per view)
+const BreadcrumbTrail = lazy(() => import('./components/BreadcrumbTrail'))
+const OneThingMode = lazy(() => import('./components/OneThingMode'))
+const FocusTimer = lazy(() => import('./components/FocusTimer'))
+const InsightsDashboard = lazy(() => import('./components/InsightsDashboard'))
+const TaskQueue = lazy(() => import('./components/TaskQueue'))
+const DailyRoutines = lazy(() => import('./components/DailyRoutines'))
+const DistractionLog = lazy(() => import('./components/DistractionLog'))
+const TimeEstimation = lazy(() => import('./components/TimeEstimation'))
+const ContextBundles = lazy(() => import('./components/ContextBundles'))
+const SmartSuggestions = lazy(() => import('./components/SmartSuggestions'))
+const EmotionalRegulation = lazy(() => import('./components/EmotionalRegulation'))
+const WeeklyReview = lazy(() => import('./components/WeeklyReview'))
+const TaskBreakdown = lazy(() => import('./components/TaskBreakdown'))
+const HyperfocusGuard = lazy(() => import('./components/HyperfocusGuard'))
+const ExternalBrain = lazy(() => import('./components/ExternalBrain'))
+
+// Lazy-loaded overlay components
+const AmbientSounds = lazy(() => import('./components/AmbientSounds'))
+const BodyDoubling = lazy(() => import('./components/BodyDoubling'))
+const FocusShield = lazy(() => import('./components/FocusShield'))
+const TransitionHelper = lazy(() => import('./components/TransitionHelper'))
+
+// Loading fallback for lazy components
+function ViewLoadingFallback() {
+  return (
+    <div className="flex items-center justify-center min-h-[300px]">
+      <div className="flex flex-col items-center gap-3">
+        <div className="w-8 h-8 rounded-full border-2 border-nero-500/30 border-t-nero-500 animate-spin" />
+        <p className="text-white/40 text-sm">Loading...</p>
+      </div>
+    </div>
+  )
+}
 
 // View modes
 const VIEW_MODES = {
@@ -469,6 +491,9 @@ export default function App() {
   // State for quick capture modal
   const [showQuickCapture, setShowQuickCapture] = useState(false)
 
+  // State for data export modal
+  const [showDataExport, setShowDataExport] = useState(false)
+
   // Keyboard shortcuts configuration
   const shortcuts = useMemo(() => [
     // Navigation shortcuts (1-9)
@@ -595,6 +620,15 @@ export default function App() {
                 )}
               </button>
 
+              {/* Data export button */}
+              <button
+                onClick={() => setShowDataExport(true)}
+                className="p-2 rounded-full bg-white/5 text-white/50 hover:bg-white/10 hover:text-white/70 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center hidden sm:flex"
+                title="Export your data"
+              >
+                <Download className="w-4 h-4" />
+              </button>
+
               {/* Keyboard shortcuts hint */}
               <button
                 onClick={() => setShowShortcutsHelp(true)}
@@ -616,12 +650,14 @@ export default function App() {
                 {...getMotionProps(prefersReducedMotion, pageVariants.conversation)}
                 className="h-full"
               >
-                <ConversationView
-                  messages={messages}
-                  setMessages={setMessages}
-                  thinkingStreamLevel={thinkingStreamLevel}
-                  energyLevel={energyLevel}
-                />
+                <ViewErrorBoundary viewName="Chat">
+                  <ConversationView
+                    messages={messages}
+                    setMessages={setMessages}
+                    thinkingStreamLevel={thinkingStreamLevel}
+                    energyLevel={energyLevel}
+                  />
+                </ViewErrorBoundary>
               </motion.div>
             )}
 
@@ -631,16 +667,20 @@ export default function App() {
                 {...getMotionProps(prefersReducedMotion, pageVariants.oneThing)}
                 className="h-full"
               >
-                <OneThingMode
-                  task={currentTask}
-                  onComplete={handleTaskComplete}
-                  onSkip={() => setCurrentTask(prev => ({
-                    ...prev,
-                    title: 'Check your calendar for Sunday',
-                    isCompleted: false
-                  }))}
-                  energyLevel={energyLevel}
-                />
+                <ViewErrorBoundary viewName="Focus">
+                  <Suspense fallback={<ViewLoadingFallback />}>
+                    <OneThingMode
+                      task={currentTask}
+                      onComplete={handleTaskComplete}
+                      onSkip={() => setCurrentTask(prev => ({
+                        ...prev,
+                        title: 'Check your calendar for Sunday',
+                        isCompleted: false
+                      }))}
+                      energyLevel={energyLevel}
+                    />
+                  </Suspense>
+                </ViewErrorBoundary>
               </motion.div>
             )}
 
@@ -650,21 +690,25 @@ export default function App() {
                 {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)}
                 className="h-full"
               >
-                <BreadcrumbTrail
-                  breadcrumbs={breadcrumbs}
-                  onResolve={resolveBreadcrumb}
-                  onJumpTo={(breadcrumb) => {
-                    setCurrentTask({
-                      id: breadcrumb.id,
-                      title: breadcrumb.activity,
-                      description: breadcrumb.context,
-                      energyRequired: 2,
-                      reason: `Getting back to where you left off`,
-                      isCompleted: false,
-                    })
-                    setViewMode(VIEW_MODES.ONE_THING)
-                  }}
-                />
+                <ViewErrorBoundary viewName="Breadcrumbs">
+                  <Suspense fallback={<ViewLoadingFallback />}>
+                    <BreadcrumbTrail
+                      breadcrumbs={breadcrumbs}
+                      onResolve={resolveBreadcrumb}
+                      onJumpTo={(breadcrumb) => {
+                        setCurrentTask({
+                          id: breadcrumb.id,
+                          title: breadcrumb.activity,
+                          description: breadcrumb.context,
+                          energyRequired: 2,
+                          reason: `Getting back to where you left off`,
+                          isCompleted: false,
+                        })
+                        setViewMode(VIEW_MODES.ONE_THING)
+                      }}
+                    />
+                  </Suspense>
+                </ViewErrorBoundary>
               </motion.div>
             )}
 
@@ -674,11 +718,15 @@ export default function App() {
                 {...getMotionProps(prefersReducedMotion, pageVariants.oneThing)}
                 className="h-full"
               >
-                <FocusTimer
-                  energyLevel={energyLevel}
-                  onSessionComplete={handleFocusSessionComplete}
-                  onTimerStateChange={setIsTimerRunning}
-                />
+                <ViewErrorBoundary viewName="Timer">
+                  <Suspense fallback={<ViewLoadingFallback />}>
+                    <FocusTimer
+                      energyLevel={energyLevel}
+                      onSessionComplete={handleFocusSessionComplete}
+                      onTimerStateChange={setIsTimerRunning}
+                    />
+                  </Suspense>
+                </ViewErrorBoundary>
               </motion.div>
             )}
 
@@ -688,12 +736,16 @@ export default function App() {
                 {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)}
                 className="h-full"
               >
-                <InsightsDashboard
-                  tasksCompleted={tasksCompleted}
-                  focusSessions={focusSessions}
-                  breadcrumbsCount={breadcrumbs.length}
-                  energyLevel={energyLevel}
-                />
+                <ViewErrorBoundary viewName="Insights">
+                  <Suspense fallback={<ViewLoadingFallback />}>
+                    <InsightsDashboard
+                      tasksCompleted={tasksCompleted}
+                      focusSessions={focusSessions}
+                      breadcrumbsCount={breadcrumbs.length}
+                      energyLevel={energyLevel}
+                    />
+                  </Suspense>
+                </ViewErrorBoundary>
               </motion.div>
             )}
 
@@ -703,11 +755,15 @@ export default function App() {
                 {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)}
                 className="h-full"
               >
-                <TaskQueue
-                  currentEnergy={energyLevel}
-                  onSelectTask={handleSelectTask}
-                  captures={captures}
-                />
+                <ViewErrorBoundary viewName="Tasks">
+                  <Suspense fallback={<ViewLoadingFallback />}>
+                    <TaskQueue
+                      currentEnergy={energyLevel}
+                      onSelectTask={handleSelectTask}
+                      captures={captures}
+                    />
+                  </Suspense>
+                </ViewErrorBoundary>
               </motion.div>
             )}
 
@@ -717,7 +773,11 @@ export default function App() {
                 {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)}
                 className="h-full"
               >
-                <DailyRoutines onComplete={handleRoutineComplete} />
+                <ViewErrorBoundary viewName="Routines">
+                  <Suspense fallback={<ViewLoadingFallback />}>
+                    <DailyRoutines onComplete={handleRoutineComplete} />
+                  </Suspense>
+                </ViewErrorBoundary>
               </motion.div>
             )}
 
@@ -727,7 +787,11 @@ export default function App() {
                 {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)}
                 className="h-full"
               >
-                <DistractionLog onLogDistraction={handleLogDistraction} />
+                <ViewErrorBoundary viewName="Distractions">
+                  <Suspense fallback={<ViewLoadingFallback />}>
+                    <DistractionLog onLogDistraction={handleLogDistraction} />
+                  </Suspense>
+                </ViewErrorBoundary>
               </motion.div>
             )}
 
@@ -737,10 +801,14 @@ export default function App() {
                 {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)}
                 className="h-full"
               >
-                <TimeEstimation
-                  currentTask={currentTask}
-                  onCompleteTask={handleTimeEstimationComplete}
-                />
+                <ViewErrorBoundary viewName="Time Training">
+                  <Suspense fallback={<ViewLoadingFallback />}>
+                    <TimeEstimation
+                      currentTask={currentTask}
+                      onCompleteTask={handleTimeEstimationComplete}
+                    />
+                  </Suspense>
+                </ViewErrorBoundary>
               </motion.div>
             )}
 
@@ -750,7 +818,9 @@ export default function App() {
                 {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)}
                 className="h-full"
               >
-                <RewardSystem />
+                <ViewErrorBoundary viewName="Rewards">
+                  <RewardSystem />
+                </ViewErrorBoundary>
               </motion.div>
             )}
 
@@ -760,10 +830,14 @@ export default function App() {
                 {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)}
                 className="h-full"
               >
-                <ContextBundles
-                  onActivate={handleActivateBundle}
-                  activeBundle={activeBundle}
-                />
+                <ViewErrorBoundary viewName="Bundles">
+                  <Suspense fallback={<ViewLoadingFallback />}>
+                    <ContextBundles
+                      onActivate={handleActivateBundle}
+                      activeBundle={activeBundle}
+                    />
+                  </Suspense>
+                </ViewErrorBoundary>
               </motion.div>
             )}
 
@@ -773,10 +847,14 @@ export default function App() {
                 {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)}
                 className="h-full"
               >
-                <SmartSuggestions
-                  energyLevel={energyLevel}
-                  onSelectTask={handleSmartTaskSelect}
-                />
+                <ViewErrorBoundary viewName="Suggestions">
+                  <Suspense fallback={<ViewLoadingFallback />}>
+                    <SmartSuggestions
+                      energyLevel={energyLevel}
+                      onSelectTask={handleSmartTaskSelect}
+                    />
+                  </Suspense>
+                </ViewErrorBoundary>
               </motion.div>
             )}
 
@@ -786,7 +864,11 @@ export default function App() {
                 {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)}
                 className="h-full"
               >
-                <EmotionalRegulation onMoodLog={handleMoodLog} />
+                <ViewErrorBoundary viewName="Feelings">
+                  <Suspense fallback={<ViewLoadingFallback />}>
+                    <EmotionalRegulation onMoodLog={handleMoodLog} />
+                  </Suspense>
+                </ViewErrorBoundary>
               </motion.div>
             )}
 
@@ -796,7 +878,11 @@ export default function App() {
                 {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)}
                 className="h-full"
               >
-                <WeeklyReview onComplete={handleWeeklyReviewComplete} />
+                <ViewErrorBoundary viewName="Weekly Review">
+                  <Suspense fallback={<ViewLoadingFallback />}>
+                    <WeeklyReview onComplete={handleWeeklyReviewComplete} />
+                  </Suspense>
+                </ViewErrorBoundary>
               </motion.div>
             )}
 
@@ -806,10 +892,14 @@ export default function App() {
                 {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)}
                 className="h-full"
               >
-                <TaskBreakdown
-                  currentTask={currentTask}
-                  onCreateMicroTask={handleCreateMicroTask}
-                />
+                <ViewErrorBoundary viewName="Task Breakdown">
+                  <Suspense fallback={<ViewLoadingFallback />}>
+                    <TaskBreakdown
+                      currentTask={currentTask}
+                      onCreateMicroTask={handleCreateMicroTask}
+                    />
+                  </Suspense>
+                </ViewErrorBoundary>
               </motion.div>
             )}
 
@@ -819,11 +909,15 @@ export default function App() {
                 {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)}
                 className="h-full"
               >
-                <HyperfocusGuard
-                  isTimerRunning={isTimerRunning}
-                  sessionStartTime={sessionStartTime}
-                  onRequestBreak={handleHyperfocusBreak}
-                />
+                <ViewErrorBoundary viewName="Hyperfocus Guard">
+                  <Suspense fallback={<ViewLoadingFallback />}>
+                    <HyperfocusGuard
+                      isTimerRunning={isTimerRunning}
+                      sessionStartTime={sessionStartTime}
+                      onRequestBreak={handleHyperfocusBreak}
+                    />
+                  </Suspense>
+                </ViewErrorBoundary>
               </motion.div>
             )}
 
@@ -833,7 +927,11 @@ export default function App() {
                 {...getMotionProps(prefersReducedMotion, pageVariants.breadcrumbs)}
                 className="h-full"
               >
-                <ExternalBrain />
+                <ViewErrorBoundary viewName="External Brain">
+                  <Suspense fallback={<ViewLoadingFallback />}>
+                    <ExternalBrain />
+                  </Suspense>
+                </ViewErrorBoundary>
               </motion.div>
             )}
           </AnimatePresence>
@@ -851,37 +949,46 @@ export default function App() {
           onCreateTask={handleCreateTaskFromCapture}
         />
 
-        {/* Ambient Sounds Mini Player */}
-        <AmbientSounds isTimerRunning={isTimerRunning} />
-
-        {/* Body Doubling / Accountability Mode */}
-        <BodyDoubling
-          isTimerRunning={isTimerRunning}
-          onRequestBreak={() => {
-            setMessages(prev => [...prev, {
-              role: 'assistant',
-              content: "Taking a break is important! Step away, stretch, hydrate. I'll be here when you're back.",
-              thinking: null,
-            }])
-          }}
+        {/* Data Export Modal */}
+        <DataExport
+          isOpen={showDataExport}
+          onClose={() => setShowDataExport(false)}
         />
 
-        {/* Focus Shield */}
-        <FocusShield
-          isTimerRunning={isTimerRunning}
-          onShieldChange={setIsShieldActive}
-        />
+        {/* Lazy-loaded overlay components */}
+        <Suspense fallback={null}>
+          {/* Ambient Sounds Mini Player */}
+          <AmbientSounds isTimerRunning={isTimerRunning} />
 
-        {/* Transition Helper Modal */}
-        <TransitionHelper
-          isOpen={showTransition}
-          onClose={() => setShowTransition(false)}
-          fromTask={transitionFromTask}
-          toTask={transitionToTask}
-          onCapture={handleTransitionCapture}
-          onDropBreadcrumb={handleTransitionBreadcrumb}
-          onComplete={handleTransitionComplete}
-        />
+          {/* Body Doubling / Accountability Mode */}
+          <BodyDoubling
+            isTimerRunning={isTimerRunning}
+            onRequestBreak={() => {
+              setMessages(prev => [...prev, {
+                role: 'assistant',
+                content: "Taking a break is important! Step away, stretch, hydrate. I'll be here when you're back.",
+                thinking: null,
+              }])
+            }}
+          />
+
+          {/* Focus Shield */}
+          <FocusShield
+            isTimerRunning={isTimerRunning}
+            onShieldChange={setIsShieldActive}
+          />
+
+          {/* Transition Helper Modal */}
+          <TransitionHelper
+            isOpen={showTransition}
+            onClose={() => setShowTransition(false)}
+            fromTask={transitionFromTask}
+            toTask={transitionToTask}
+            onCapture={handleTransitionCapture}
+            onDropBreadcrumb={handleTransitionBreadcrumb}
+            onComplete={handleTransitionComplete}
+          />
+        </Suspense>
 
         {/* Reward System Overlays */}
         <AnimatePresence>

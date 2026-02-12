@@ -1,0 +1,19 @@
+{
+  "name": "UnFocused - ADHD Companion",
+  "short_name": "UnFocused",
+  "description": "Your AI Companion for the ADHD Brain",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f0f0f",
+  "theme_color": "#ed7412",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["productivity", "health", "lifestyle"]
+}
