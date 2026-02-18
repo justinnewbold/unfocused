@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Shuffle,
@@ -123,11 +123,21 @@ export default function DecisionHelper({ energyLevel, onDecisionMade }) {
   const [showCustomize, setShowCustomize] = useState(false)
   const [editingCategory, setEditingCategory] = useState(null)
   const [newOption, setNewOption] = useState('')
+  const spinIntervalRef = useRef(null)
 
   // Load data on mount
   useEffect(() => {
     setCategories(loadPresets())
     setDecisionLog(loadDecisionLog())
+  }, [])
+
+  // Clean up spin interval on unmount
+  useEffect(() => {
+    return () => {
+      if (spinIntervalRef.current) {
+        clearInterval(spinIntervalRef.current)
+      }
+    }
   }, [])
 
   // Get recent decisions for a category
@@ -151,13 +161,14 @@ export default function DecisionHelper({ energyLevel, onDecisionMade }) {
     // Simulate spinning
     let spins = 0
     const maxSpins = 10
-    const spinInterval = setInterval(() => {
+    spinIntervalRef.current = setInterval(() => {
       const randomOption = pool[Math.floor(Math.random() * pool.length)]
       setResult(randomOption)
       spins++
 
       if (spins >= maxSpins) {
-        clearInterval(spinInterval)
+        clearInterval(spinIntervalRef.current)
+        spinIntervalRef.current = null
         setIsSpinning(false)
 
         // Log the decision

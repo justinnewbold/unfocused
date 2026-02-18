@@ -99,11 +99,11 @@ export default function AppointmentBuffer({ onSetReminder }) {
     // Total time needed
     const totalMinutes = travelMinutes + prepMinutes
 
-    // Calculate leave time
-    const leaveTime = new Date(appointmentDate.getTime() - totalMinutes * 60 * 1000)
+    // Calculate start prep time (need to start getting ready this early)
+    const startPrepTime = new Date(appointmentDate.getTime() - totalMinutes * 60 * 1000)
 
-    // Calculate start prep time
-    const startPrepTime = new Date(leaveTime.getTime() - prepMinutes * 60 * 1000)
+    // Calculate leave time (leave after prep is done, with just travel time remaining)
+    const leaveTime = new Date(appointmentDate.getTime() - travelMinutes * 60 * 1000)
 
     // Time until leave
     const now = new Date()

@@ -220,7 +220,7 @@ export default function ChallengesMode() {
   const totalXP = useMemo(() => {
     return Object.entries(progress).reduce((total, [key, value]) => {
       if (value.completed) {
-        const challengeId = key.split('-').slice(0, -1).join('-')
+        const challengeId = key.replace(/-\d{4}-W?\d+(-\d+)?$/, '')
         const challenge = AVAILABLE_CHALLENGES.find(c => c.id === challengeId)
         return total + (challenge?.xp || 0)
       }

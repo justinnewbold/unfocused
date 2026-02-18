@@ -304,13 +304,17 @@ export default function InsightsDashboard({
               Energy Throughout the Day
             </h3>
             <div className="space-y-3">
-              {insights.today.energyLevels.map((level, i) => (
-                <EnergyBar
-                  key={i}
-                  level={level}
-                  label={`${i + 1}${['st', 'nd', 'rd'][i] || 'th'}`}
-                />
-              ))}
+              {insights.today.energyLevels.map((level, i) => {
+                const n = i + 1
+                const suffix = (n >= 11 && n <= 13) ? 'th' : (['th', 'st', 'nd', 'rd'][n % 10] || 'th')
+                return (
+                  <EnergyBar
+                    key={i}
+                    level={level}
+                    label={`${n}${suffix}`}
+                  />
+                )
+              })}
             </div>
           </div>
         )}

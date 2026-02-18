@@ -7,7 +7,8 @@ export default function BreadcrumbTrail({ breadcrumbs, onResolve, onJumpTo }) {
   const prefersReducedMotion = useReducedMotion()
 
   const formatTimeAgo = (date) => {
-    const minutes = Math.floor((Date.now() - date.getTime()) / 1000 / 60)
+    const dateObj = date instanceof Date ? date : new Date(date)
+    const minutes = Math.floor((Date.now() - dateObj.getTime()) / 1000 / 60)
     if (minutes < 1) return 'Just now'
     if (minutes < 60) return `${minutes}m ago`
     const hours = Math.floor(minutes / 60)

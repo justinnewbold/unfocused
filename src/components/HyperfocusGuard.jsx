@@ -298,6 +298,7 @@ export default function HyperfocusGuard({ isTimerRunning, sessionStartTime, onRe
   }
 
   const handleExtendHardStop = () => {
+    if (!settings.hardStopTime) return
     const [hours, mins] = settings.hardStopTime.split(':').map(Number)
     const newTime = new Date()
     newTime.setHours(hours, mins + 15, 0, 0)
