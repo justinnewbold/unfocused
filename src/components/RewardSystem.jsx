@@ -256,9 +256,9 @@ export function useRewardSystem() {
   }
 
   // Check achievements
-  const checkAchievements = (stats) => {
+  const checkAchievements = (stats, currentAchievements) => {
     ACHIEVEMENTS.forEach(achievement => {
-      if (data.achievements.includes(achievement.id)) return
+      if (currentAchievements.includes(achievement.id)) return
 
       const { type, count, id } = achievement.requirement
 
@@ -294,7 +294,7 @@ export function useRewardSystem() {
     // Add streak bonus
     const streakBonus = Math.min(data.currentStreak * XP_VALUES.streakBonus, 100)
     addXp(XP_VALUES.taskComplete + streakBonus, 'Task completed')
-    checkAchievements(newStats)
+    checkAchievements(newStats, data.achievements)
   }
 
   // Record focus session
@@ -311,7 +311,7 @@ export function useRewardSystem() {
 
     const streakBonus = Math.min(data.currentStreak * XP_VALUES.streakBonus, 100)
     addXp(XP_VALUES.focusSession + streakBonus, 'Focus session completed')
-    checkAchievements(newStats)
+    checkAchievements(newStats, data.achievements)
   }
 
   // Record breadcrumb resolved
@@ -327,7 +327,7 @@ export function useRewardSystem() {
     }))
 
     addXp(XP_VALUES.breadcrumbResolved, 'Breadcrumb resolved')
-    checkAchievements(newStats)
+    checkAchievements(newStats, data.achievements)
   }
 
   // Clear pending rewards

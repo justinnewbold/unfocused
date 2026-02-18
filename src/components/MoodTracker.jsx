@@ -450,7 +450,11 @@ export default function MoodTracker({ energyLevel, onMoodLogged }) {
             {/* Month navigation */}
             <div className="flex items-center justify-between mb-4">
               <button
-                onClick={() => setSelectedMonth(new Date(selectedMonth.setMonth(selectedMonth.getMonth() - 1)))}
+                onClick={() => {
+                  const newDate = new Date(selectedMonth)
+                  newDate.setMonth(newDate.getMonth() - 1)
+                  setSelectedMonth(newDate)
+                }}
                 className="p-2 rounded-lg hover:bg-white/10"
               >
                 <ChevronLeft className="w-5 h-5" />
@@ -459,7 +463,11 @@ export default function MoodTracker({ energyLevel, onMoodLogged }) {
                 {selectedMonth.toLocaleDateString('en', { month: 'long', year: 'numeric' })}
               </span>
               <button
-                onClick={() => setSelectedMonth(new Date(selectedMonth.setMonth(selectedMonth.getMonth() + 1)))}
+                onClick={() => {
+                  const newDate = new Date(selectedMonth)
+                  newDate.setMonth(newDate.getMonth() + 1)
+                  setSelectedMonth(newDate)
+                }}
                 className="p-2 rounded-lg hover:bg-white/10"
               >
                 <ChevronRight className="w-5 h-5" />

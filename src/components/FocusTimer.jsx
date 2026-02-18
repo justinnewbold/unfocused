@@ -67,6 +67,11 @@ export default function FocusTimer({ energyLevel, onSessionComplete, onTimerStat
   useEffect(() => {
     // Create a simple audio context for completion sound
     audioRef.current = new (window.AudioContext || window.webkitAudioContext)()
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.close()
+      }
+    }
   }, [])
 
   // Play completion sound

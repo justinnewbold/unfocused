@@ -274,11 +274,11 @@ export default function AchievementBadges() {
   }, [])
 
   // Check for new achievements
-  const checkAchievements = (stats) => {
+  const checkAchievements = (stats, currentData) => {
     const newlyUnlocked = []
 
     ACHIEVEMENTS.forEach(achievement => {
-      if (!achievementData.unlocked.includes(achievement.id)) {
+      if (!currentData.unlocked.includes(achievement.id)) {
         const currentValue = stats[achievement.type] || 0
         if (currentValue >= achievement.requirement) {
           newlyUnlocked.push(achievement.id)
@@ -288,8 +288,8 @@ export default function AchievementBadges() {
 
     if (newlyUnlocked.length > 0) {
       const updated = {
-        ...achievementData,
-        unlocked: [...achievementData.unlocked, ...newlyUnlocked],
+        ...currentData,
+        unlocked: [...currentData.unlocked, ...newlyUnlocked],
         stats
       }
       setAchievementData(updated)
@@ -311,7 +311,7 @@ export default function AchievementBadges() {
     const updated = { ...achievementData, stats: newStats }
     setAchievementData(updated)
     saveAchievements(updated)
-    checkAchievements(newStats)
+    checkAchievements(newStats, updated)
   }
 
   // Get achievement progress

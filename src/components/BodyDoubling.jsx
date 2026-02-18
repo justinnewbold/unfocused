@@ -73,6 +73,11 @@ export default function BodyDoubling({ isTimerRunning, onRequestBreak }) {
   // Initialize audio
   useEffect(() => {
     audioRef.current = new (window.AudioContext || window.webkitAudioContext)()
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.close()
+      }
+    }
   }, [])
 
   // Play gentle notification sound

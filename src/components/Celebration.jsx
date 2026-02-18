@@ -111,6 +111,11 @@ export default function Celebration({ celebration, onDismiss }) {
   // Initialize audio context for celebration sound
   useEffect(() => {
     audioRef.current = new (window.AudioContext || window.webkitAudioContext)()
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.close()
+      }
+    }
   }, [])
 
   // Play celebration sound
